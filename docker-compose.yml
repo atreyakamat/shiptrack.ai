@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+      - "8501:8501"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://shiptrack:shiptrack_pass@db:5432/shiptrack
+      - SECRET_KEY=generate-a-secure-secret-key-here
+      - ADMIN_PASSWORD_HASH=pbkdf2:sha256:1000000$replace_with_real_hash
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+    restart: always
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=shiptrack
+      - POSTGRES_PASSWORD=shiptrack_pass
+      - POSTGRES_DB=shiptrack
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shiptrack"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+volumes:
+  pgdata:

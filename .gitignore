@@ -30,3 +30,18 @@ __pycache__/
 .pytest_cache/
 .venv/
 .env
+
+# Database
+*.db
+instance/
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+logs/
+
+# IDE
+.vscode/
+.idea/

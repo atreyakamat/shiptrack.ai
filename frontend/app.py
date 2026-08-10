@@ -1,86 +1,80 @@
+import streamlit as st
 import os
 
-import requests
-import streamlit as st
+# 1. Page Config (Must be first)
+st.set_page_config(
+    page_title='ShipTrack AI',
+    page_icon='📦',
+    layout='wide',
+    initial_sidebar_state='expanded'
+)
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:5000")
-API_PREFIX = f"{API_BASE_URL}/api/v1"
+# 2. Load CSS
+css_path = os.path.join(os.path.dirname(__file__), 'styles', 'main.css')
+if os.path.exists(css_path):
+    with open(css_path) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-st.set_page_config(page_title="ShipTrack AI", page_icon="📦", layout="wide")
-st.title("ShipTrack AI")
-st.caption("Basic PRD-aligned scaffold")
+# 3. Imports
+from api_client import ShipTrackAPI
+from components.sidebar import render_sidebar
+from pages import (
+    dashboard,
+    shipments,
+    shipment_detail,
+    add_shipment,
+    ocr_scanner,
+    analytics,
+    ai_insights,
+    notifications,
+    settings
+)
 
+# 4. Initialize State
+if 'current_page' not in st.session_state:
+    st.session_state['current_page'] = 'dashboard'
 
-def fetch_shipments() -> tuple[list[dict], str]:
-    try:
-        response = requests.get(f"{API_PREFIX}/shipments", timeout=5)
-        response.raise_for_status()
-        return response.json(), ""
-    except requests.RequestException as error:
-        return [], str(error)
+# Initialize API Client
+@st.cache_resource
+def get_api():
+    return ShipTrackAPI()
 
+api = get_api()
 
-with st.sidebar:
-    st.subheader("Navigation")
-    view = st.radio("View", ["Dashboard", "Add Shipment", "Shipments"])
+# Fetch health status on load
+if 'api_health' not in st.session_state:
+    st.session_state['api_health'] = api.health_check()
 
-if view == "Dashboard":
-    st.subheader("Dashboard")
-    shipments, error = fetch_shipments()
-    if error:
-        st.warning(f"Backend unavailable: {error}")
-    total = len(shipments)
-    delivered = sum(1 for item in shipments if item.get("status") == "delivered")
-    in_transit = sum(1 for item in shipments if item.get("status") == "in_transit")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Shipments", total)
-    col2.metric("In Transit", in_transit)
-    col3.metric("Delivered", delivered)
-
-if view == "Add Shipment":
-    st.subheader("Add Shipment")
-    with st.form("add_shipment_form", clear_on_submit=True):
-        tracking_number = st.text_input("Tracking Number (e.g., EM740043207IN)")
-        description = st.text_input("Description")
-        category = st.text_input("Category", value="general")
-        priority = st.selectbox("Priority", options=["low", "medium", "high"], index=1)
-        submitted = st.form_submit_button("Create Shipment")
-
-        if submitted:
-            payload = {
-                "tracking_number": tracking_number.strip().upper(),
-                "description": description,
-                "category": category,
-                "priority": priority,
-                "carrier": "India Post",
-            }
-            try:
-                response = requests.post(f"{API_PREFIX}/shipments", json=payload, timeout=5)
-                if response.status_code == 201:
-                    st.success("Shipment created")
-                else:
-                    st.error(response.json().get("error", "Failed to create shipment"))
-            except requests.RequestException as error:
-                st.error(f"Backend unavailable: {error}")
-
-if view == "Shipments":
-    st.subheader("Shipments")
-    shipments, error = fetch_shipments()
-    if error:
-        st.warning(f"Backend unavailable: {error}")
-    elif not shipments:
-        st.info("No shipments yet")
+if 'auth_token' not in st.session_state:
+    from pages import login
+    login.show(api)
+else:
+    # Inject token into API client
+    api.set_token(st.session_state.auth_token)
+    
+    # 5. Render Sidebar
+    render_sidebar()
+    
+    # 6. Page Routing
+    current = st.session_state['current_page']
+    
+    if current == 'dashboard':
+        dashboard.show(api)
+    elif current == 'shipments':
+        shipments.show(api)
+    elif current == 'shipment_detail':
+        shipment_detail.show(api)
+    elif current == 'add_shipment':
+        add_shipment.show(api)
+    elif current == 'ocr_scanner':
+        ocr_scanner.show(api)
+    elif current == 'analytics':
+        analytics.show(api)
+    elif current == 'ai_insights':
+        ai_insights.show(api)
+    elif current == 'notifications':
+        notifications.show(api)
+    elif current == 'settings':
+        settings.show(api)
     else:
-        st.dataframe(
-            [
-                {
-                    "id": item["id"],
-                    "tracking_number": item["tracking_number"],
-                    "status": item["status"],
-                    "location": item.get("location", ""),
-                    "updated_at": item["updated_at"],
-                }
-                for item in shipments
-            ],
-            use_container_width=True,
-        )
+        dashboard.show(api)
