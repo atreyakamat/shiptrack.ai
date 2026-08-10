@@ -1,6 +1,37 @@
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 const Hero = () => {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState('idle');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!email) return;
+    
+    setStatus('submitting');
+    try {
+      const formData = new URLSearchParams();
+      formData.append('form-name', 'waitlist');
+      formData.append('email', email);
+
+      const res = await fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+      });
+
+      if (res.ok) {
+        setStatus('success');
+        setEmail('');
+      } else {
+        setStatus('error');
+      }
+    } catch (err) {
+      setStatus('error');
+    }
+  };
+
   const scrollToWishlist = () => {
     document.getElementById('wishlist')?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -45,27 +76,54 @@ const Hero = () => {
         An Intelligent Shipment Management Platform built for individuals, creators, and businesses. Track smarter. Understand deliveries. Organize everything.
       </motion.p>
 
-      {/* Buttons */}
+      {/* Waitlist Form */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, delay: 0.8 }}
-        className="flex flex-col sm:flex-row gap-4 mb-16"
+        className="w-full max-w-md mx-auto mb-16"
       >
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={scrollToWishlist}
-          className="px-8 py-3.5 bg-[#38BDF8] text-[#020617] font-semibold rounded-xl text-base hover:bg-[#7DD3FC] transition-colors duration-300 shadow-lg shadow-[#38BDF8]/20"
-        >
-          View Wishlist
-        </motion.button>
-        <button
-          disabled
-          className="px-8 py-3.5 border border-white/10 bg-white/5 backdrop-blur-sm text-[#94A3B8] font-medium rounded-xl text-base cursor-not-allowed opacity-50"
-        >
-          GitHub (Coming Soon)
-        </button>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="email"
+              name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email address"
+              required
+              disabled={status === 'submitting' || status === 'success'}
+              className="flex-1 px-5 py-3.5 bg-[#0F172A]/80 border border-white/10 rounded-xl text-[#F8FAFC] placeholder:text-[#94A3B8] focus:outline-none focus:border-[#38BDF8]/50 focus:ring-1 focus:ring-[#38BDF8]/50 backdrop-blur-sm transition-all disabled:opacity-50"
+            />
+            <motion.button
+              whileHover={status !== 'submitting' && status !== 'success' ? { scale: 1.02 } : {}}
+              whileTap={status !== 'submitting' && status !== 'success' ? { scale: 0.98 } : {}}
+              disabled={status === 'submitting' || status === 'success'}
+              type="submit"
+              className="px-8 py-3.5 bg-[#38BDF8] text-[#020617] font-semibold rounded-xl text-base hover:bg-[#7DD3FC] transition-colors duration-300 shadow-lg shadow-[#38BDF8]/20 disabled:opacity-70 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {status === 'submitting' ? 'Joining...' : status === 'success' ? 'Joined!' : 'Join Waitlist'}
+            </motion.button>
+          </div>
+          
+          <div className="min-h-[24px] text-sm flex items-center justify-center">
+            {status === 'success' && (
+              <span className="text-emerald-400 font-medium">You're on the list! We'll be in touch soon.</span>
+            )}
+            {status === 'error' && (
+              <span className="text-red-400 font-medium">Oops, something went wrong. Please try again.</span>
+            )}
+            {status === 'idle' && (
+              <button 
+                type="button" 
+                onClick={scrollToWishlist}
+                className="text-[#94A3B8] hover:text-[#F8FAFC] transition-colors underline decoration-white/20 underline-offset-4"
+              >
+                Or scroll down to view features
+              </button>
+            )}
+          </div>
+        </form>
       </motion.div>
 
       {/* Developer Signature */}
