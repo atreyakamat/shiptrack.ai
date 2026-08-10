@@ -12,10 +12,9 @@ const Hero = () => {
     setStatus('submitting');
     try {
       const formData = new URLSearchParams();
-      formData.append('form-name', 'waitlist');
       formData.append('email', email);
 
-      const res = await fetch('/', {
+      const res = await fetch(`https://waitlister.me/s/${import.meta.env.VITE_WAITLIST_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData.toString()
