@@ -7,17 +7,7 @@ from backend.models.user import User
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        # Bypass auth for tests if needed, but in Sprint 5 we should actually test auth!
-        # Only bypass if specifically requested, or test with mock tokens.
-        # Actually, let's inject a test user if testing to simulate auth.
-        if current_app.config.get('TESTING'):
-            # In testing, we might want to mock the user
-            test_user = User.query.first()
-            if not test_user:
-                return f(*args, **kwargs) # Fallback if DB empty in test
-            g.current_user = test_user
-            return f(*args, **kwargs)
-            
+
         token = None
         if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']

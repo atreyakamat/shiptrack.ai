@@ -24,6 +24,10 @@ class Shipment(db.Model):
     tariff = db.Column(db.String(50))
     origin_pincode = db.Column(db.String(10))
     destination_pincode = db.Column(db.String(10))
+    last_successful_sync = db.Column(db.DateTime)
+    last_attempted_sync = db.Column(db.DateTime)
+    last_failed_sync = db.Column(db.DateTime)
+    last_error = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -61,6 +65,10 @@ class Shipment(db.Model):
             'tariff': self.tariff,
             'origin_pincode': self.origin_pincode,
             'destination_pincode': self.destination_pincode,
+            'last_successful_sync': self.last_successful_sync.isoformat() if self.last_successful_sync else None,
+            'last_attempted_sync': self.last_attempted_sync.isoformat() if self.last_attempted_sync else None,
+            'last_failed_sync': self.last_failed_sync.isoformat() if self.last_failed_sync else None,
+            'last_error': self.last_error,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

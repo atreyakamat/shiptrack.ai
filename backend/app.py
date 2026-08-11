@@ -45,22 +45,43 @@ def seed_db(app):
         from backend.carriers.mock import MockCarrierAdapter
         from werkzeug.security import generate_password_hash
 
-        if User.query.count() == 0:
-            default_user = User(
-                email="demo@shiptrack.ai",
-                password_hash=generate_password_hash("demo123")
-            )
-            db.session.add(default_user)
-            db.session.commit()
-            
-            adapter = MockCarrierAdapter()
-            for tracking_number in adapter.demo_data.keys():
-                shipment = ShipmentService.create_shipment(default_user.id, {
-                    'tracking_number': tracking_number,
-                    'carrier': 'mock',
-                    'description': f'Demo shipment {tracking_number}'
-                })
-                TrackingService.refresh_shipment(shipment.id)
+        admin_email = os.getenv('ADMIN_EMAIL')
+        admin_password = os.getenv('ADMIN_PASSWORD')
+        
+        is_prod = os.getenv('FLASK_ENV', 'development') == 'production'
+        if is_prod and admin_password == 'demo123':
+            logger = logging.getLogger(__name__)
+            logger.error("FATAL SECURITY ERROR: Insecure default password 'demo123' cannot be used in production.")
+            sys.exit(1)
+
+        if admin_email and admin_password:
+            if User.query.filter_by(email=admin_email).first() is None:
+                default_user = User(
+                    email=admin_email,
+                    password_hash=generate_password_hash(admin_password)
+                )
+                db.session.add(default_user)
+                db.session.commit()
+                
+                # Optionally seed demo data if explicitly asked or if not in strict production
+                if not is_prod or os.getenv('SEED_DEMO_DATA') == 'true':
+                    adapter = MockCarrierAdapter()
+                    for tracking_number in adapter.demo_data.keys():
+                        shipment = ShipmentService.create_shipment(default_user.id, {
+                            'tracking_number': tracking_number,
+                            'carrier': 'mock',
+                            'description': f'Demo shipment {tracking_number}'
+                        })
+                        TrackingService.refresh_shipment(shipment.id)
+        elif not is_prod:
+            # Fallback for local development ease if env vars not provided
+            if User.query.filter_by(email="demo@shiptrack.ai").first() is None:
+                default_user = User(
+                    email="demo@shiptrack.ai",
+                    password_hash=generate_password_hash("demo123")
+                )
+                db.session.add(default_user)
+                db.session.commit()
 
 if __name__ == '__main__':
     app = create_app()

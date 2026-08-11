@@ -26,13 +26,30 @@ def show(api):
     with c2: render_metric_card("In Transit", stats.get('in_transit', 0), "🚚", "var(--status-transit)")
     with c3: render_metric_card("Out for Delivery", stats.get('out_for_delivery', 0), "🛵", "var(--status-out)")
     with c4: render_metric_card("Delivered", stats.get('delivered', 0), "✅", "var(--status-delivered)")
-    with c5: render_metric_card("Delayed", stats.get('delayed', 0), "⚠️", "var(--status-delayed)")
+    with c5: render_metric_card("Delayed / Attention", stats.get('delayed', 0), "⚠️", "var(--status-delayed)")
     
     st.markdown("<br>", unsafe_allow_html=True)
     
+    shipments = api.get_shipments() or []
+    
+    # Needs Attention Section
+    delayed_shipments = [s for s in shipments if s.get('status') in ['DELAYED', 'EXCEPTION']]
+    if delayed_shipments:
+        st.markdown("<h4 style='color: var(--status-delayed);'>⚠️ Shipments Needing Attention</h4>", unsafe_allow_html=True)
+        for s in delayed_shipments[:5]:
+            col_card, col_acts = st.columns([5, 1])
+            with col_card:
+                render_shipment_row(s)
+            with col_acts:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("View", key=f"view_att_{s.get('id')}", use_container_width=True):
+                    st.session_state['current_shipment_id'] = s.get('id')
+                    st.session_state['current_page'] = 'shipment_detail'
+                    st.rerun()
+        st.markdown("<br>", unsafe_allow_html=True)
+    
     # Charts Row
     ch1, ch2 = st.columns([1, 2])
-    shipments = api.get_shipments() or []
     
     with ch1:
         st.markdown("<h4>Status Distribution</h4>", unsafe_allow_html=True)
@@ -45,7 +62,7 @@ def show(api):
         st.plotly_chart(fig_area, use_container_width=True, config={'displayModeBar': False})
 
     # Recent Shipments
-    st.markdown("<h4>Recent Shipments</h4>", unsafe_allow_html=True)
+    st.markdown("<h4>Recent Shipment Updates</h4>", unsafe_allow_html=True)
     if not shipments:
         st.info("No recent shipments found.")
     else:

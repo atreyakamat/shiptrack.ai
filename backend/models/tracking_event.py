@@ -10,8 +10,13 @@ class TrackingEvent(db.Model):
     event_time = db.Column(db.String(20))
     status = db.Column(db.String(100), nullable=False)
     location = db.Column(db.String(200))
+    location_code = db.Column(db.String(50))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
     description = db.Column(db.String(500))
     raw_status = db.Column(db.String(200))
+    source = db.Column(db.String(50))
+    event_timestamp = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
@@ -26,7 +31,12 @@ class TrackingEvent(db.Model):
             'event_time': self.event_time,
             'status': self.status,
             'location': self.location,
+            'location_code': self.location_code,
+            'latitude': self.latitude,
+            'longitude': self.longitude,
             'description': self.description,
             'raw_status': self.raw_status,
+            'source': self.source,
+            'event_timestamp': self.event_timestamp.isoformat() if self.event_timestamp else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

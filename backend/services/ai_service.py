@@ -52,13 +52,25 @@ class AIService:
                 prediction = "Already delivered."
             elif status == 'OUT_FOR_DELIVERY':
                 summary_text = f"Your parcel has reached the destination delivery office and is currently out for delivery in {last_location}. Expect it today!"
-                prediction = "Delivery expected today."
+                prediction = "Delivery expected today based on tracking data."
+            elif status == 'ARRIVED_AT_FACILITY':
+                summary_text = f"Your parcel has arrived at a sorting facility or post office in {last_location}."
+                prediction = "Awaiting dispatch to the next location."
             elif status == 'IN_TRANSIT':
                 summary_text = f"Your parcel is steadily making its way through the network. It was last processed at {last_location}."
-                prediction = "Expected delivery in 1-2 days based on current progress."
+                prediction = "Transit is ongoing based on current progress."
+            elif status == 'DISPATCHED':
+                summary_text = f"Your parcel has been dispatched from {last_location}."
+                prediction = "Moving to the next facility."
             elif status == 'BOOKED':
                 summary_text = f"Your parcel has been booked at {last_location} and is awaiting dispatch."
-                prediction = "Expected delivery in 3-5 days."
+                prediction = "Awaiting movement."
+            elif status == 'DELAYED' or status == 'EXCEPTION':
+                summary_text = f"Your parcel encountered a delay or exception. Last known location is {last_location}."
+                prediction = "Delivery may be delayed."
+            elif status == 'RETURNED':
+                summary_text = f"Your parcel is being returned. Last scan at {last_location}."
+                prediction = "Return in progress."
             else:
                 summary_text = f"Shipment {shipment.tracking_number} is currently {status}. Last seen at {last_location}."
                 prediction = "Awaiting more data."

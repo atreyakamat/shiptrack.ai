@@ -6,6 +6,7 @@ from .ai_summary import AISummary
 from .notification import Notification
 from .notification_preference import NotificationPreference
 from .refresh_log import RefreshLog
+from .postal_office import PostalOffice
 
 __all__ = [
     'User',
@@ -15,5 +16,6 @@ __all__ = [
     'AISummary',
     'Notification',
     'NotificationPreference',
-    'RefreshLog'
+    'RefreshLog',
+    'PostalOffice'
 ]

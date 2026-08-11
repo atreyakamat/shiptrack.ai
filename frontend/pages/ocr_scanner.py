@@ -37,21 +37,26 @@ def show(api):
                     st.info("Ensure the image is clear, well-lit, and the tracking number (e.g. EM123456789IN) is visible.")
                 else:
                     confidence = res.get('confidence')
-                    
-                    st.success(f"Tracking Number Found: **{tracking_num}**")
                     if confidence is not None:
+                        if confidence < 0.7:
+                            st.warning("⚠️ Low confidence extraction. Please verify the tracking number below.")
+                        else:
+                            st.success("High confidence extraction.")
                         st.progress(float(confidence))
                         st.caption(f"Real Extraction Confidence: {confidence*100:.1f}%")
                     else:
                         st.caption("No confidence score available in Demo Mode.")
-                    
+                        
                 with st.expander("Show Full Extracted Text"):
                     st.text(res.get('ocr_text', res.get('full_text', 'No text extracted.')))
                     
                 if tracking_num and tracking_num != 'Not Found':
+                    # Allow user to edit the extracted tracking number
+                    final_tracking = st.text_input("Verify Tracking Number", value=tracking_num)
+                    
                     if st.button("Confirm & Add Shipment", type="primary"):
                         s_data = {
-                            "tracking_number": tracking_num,
+                            "tracking_number": final_tracking,
                             "carrier": res.get('carrier_guess', 'India Post'),
                             "description": "Scanned from receipt"
                         }

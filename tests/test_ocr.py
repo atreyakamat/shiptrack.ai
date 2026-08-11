@@ -20,12 +20,17 @@ def test_validate_tracking_number():
 
 def test_extract_tracking_number_valid():
     text = "RECEIPT\nTRACKING ID: EM123456789IN\nDATE: 01/01/2026"
-    assert OCRService.extract_tracking_number(text) == "EM123456789IN"
+    res = OCRService.extract_tracking_number(text)
+    assert res is not None
+    assert res[0] == "EM123456789IN"
 
 def test_extract_tracking_number_with_noise():
     text = "IN EM123456789IN 1234 INDIA POST"
-    assert OCRService.extract_tracking_number(text) == "EM123456789IN"
+    res = OCRService.extract_tracking_number(text)
+    assert res is not None
+    assert res[0] == "EM123456789IN"
 
 def test_extract_tracking_number_invalid():
     text = "RECEIPT\nTRACKING ID: 123456\nDATE: 01/01/2026"
-    assert OCRService.extract_tracking_number(text) is None
+    res = OCRService.extract_tracking_number(text)
+    assert res[0] is None

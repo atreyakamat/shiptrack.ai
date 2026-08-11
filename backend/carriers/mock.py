@@ -123,6 +123,9 @@ class MockCarrierAdapter(BaseCarrierAdapter):
         if 'out for delivery' in s: return self.STATUS_OUT_FOR_DELIVERY
         if 'booked' in s: return self.STATUS_BOOKED
         if 'dispatched' in s: return self.STATUS_DISPATCHED
+        if 'arrived' in s: return self.STATUS_ARRIVED_AT_FACILITY
         if 'received' in s or 'bagged' in s: return self.STATUS_IN_TRANSIT
-        if 'exception' in s or 'delay' in s: return self.STATUS_EXCEPTION
+        if 'exception' in s: return self.STATUS_EXCEPTION
+        if 'delay' in s: return self.STATUS_DELAYED
+        if 'return' in s: return self.STATUS_RETURNED
         return self.STATUS_UNKNOWN

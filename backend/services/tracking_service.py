@@ -5,10 +5,12 @@ from backend.extensions import db
 from backend.models.shipment import Shipment
 from backend.models.tracking_event import TrackingEvent
 from backend.models.refresh_log import RefreshLog
+from backend.models.postal_office import PostalOffice
 from backend.carriers.mock import MockCarrierAdapter
 from backend.carriers.india_post import IndiaPostAdapter
 from .notification_service import NotificationService
 import os
+import dateutil.parser
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,23 @@ class TrackingService:
                         location=event_data.get('location'),
                         raw_status=event_data.get('raw_status')
                     )
+                    
+                    # Try to map location to coordinates
+                    if new_event.location:
+                        office = PostalOffice.query.filter(PostalOffice.name.ilike(f"%{new_event.location}%")).first()
+                        if office:
+                            new_event.latitude = office.latitude
+                            new_event.longitude = office.longitude
+                            new_event.location_code = office.code
+                            
+                    # Attempt to parse event timestamp
+                    try:
+                        dt_str = f"{new_event.event_date} {new_event.event_time}".strip()
+                        if dt_str:
+                            new_event.event_timestamp = dateutil.parser.parse(dt_str)
+                    except:
+                        pass
+                        
                     db.session.add(new_event)
                     added_count += 1
             db.session.commit()
@@ -70,6 +89,8 @@ class TrackingService:
             if not shipment:
                 raise Exception("Shipment not found")
                 
+            shipment.last_attempted_sync = datetime.now(timezone.utc)
+            
             adapter = TrackingService.get_carrier_adapter(shipment.carrier)
             tracking_data = adapter.track(shipment.tracking_number)
             
@@ -87,9 +108,11 @@ class TrackingService:
                 shipment.destination = details.get('destination', shipment.destination)
                 
                 if events:
-                    shipment.current_location = events[-1].get('location')
+                    shipment.current_location = adapter.get_latest_location(events)
                     
                 shipment.last_updated = datetime.now(timezone.utc)
+                shipment.last_successful_sync = datetime.now(timezone.utc)
+                shipment.last_error = None
                 db.session.commit()
                 
                 db.session.commit()
@@ -136,6 +159,16 @@ class TrackingService:
             logger.error(f"Error refreshing shipment {shipment_id}: {e}")
             log.status = 'error'
             log.error_message = str(e)
+            
+            # Record failed sync metadata safely
+            try:
+                shipment_err = db.session.query(Shipment).get(shipment_id)
+                if shipment_err:
+                    shipment_err.last_failed_sync = datetime.now(timezone.utc)
+                    shipment_err.last_error = str(e)
+                    db.session.commit()
+            except:
+                db.session.rollback()
             
             # Send refresh failed notification
             NotificationService.trigger_event(

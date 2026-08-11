@@ -5,9 +5,9 @@ from backend.models.tracking_event import TrackingEvent
 from datetime import datetime, timezone, timedelta
 from backend.extensions import db
 
-def test_classify_health(app):
+def test_classify_health(app, test_user):
     with app.app_context():
-        s = Shipment(tracking_number="AA123456789IN", status="IN_TRANSIT")
+        s = Shipment(user_id=test_user.id, tracking_number="AA123456789IN", status="IN_TRANSIT")
         db.session.add(s)
         db.session.commit()
         
@@ -30,9 +30,9 @@ def test_classify_health(app):
         db.session.commit()
         assert AIService.classify_health(s) == 'DELIVERED'
 
-def test_generate_summary_no_hallucination(app):
+def test_generate_summary_no_hallucination(app, test_user):
     with app.app_context():
-        s = Shipment(tracking_number="BB123456789IN", status="BOOKED")
+        s = Shipment(user_id=test_user.id, tracking_number="BB123456789IN", status="BOOKED")
         db.session.add(s)
         db.session.commit()
         

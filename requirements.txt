@@ -33,6 +33,8 @@ beautifulsoup4>=4.12
 # Frontend
 streamlit>=1.37
 plotly>=5.18
+folium>=0.16
+streamlit-folium>=0.21
 
 # Testing
 pytest>=8.0

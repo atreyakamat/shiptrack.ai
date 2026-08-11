@@ -1,6 +1,7 @@
 import streamlit as st
 from components.status_badge import render_status_badge
 from components.timeline import render_timeline
+from components.map import render_journey_map
 
 def render_progress_bar(status):
     stages = ["Booked", "Dispatched", "In Transit", "Out for Delivery", "Delivered"]
@@ -8,10 +9,10 @@ def render_progress_bar(status):
     status_lower = status.lower()
     current_idx = 0
     if "dispatch" in status_lower: current_idx = 1
-    elif "transit" in status_lower: current_idx = 2
+    elif "transit" in status_lower or "arrived" in status_lower or "facility" in status_lower: current_idx = 2
     elif "out" in status_lower: current_idx = 3
     elif "deliver" in status_lower: current_idx = 4
-    elif "delay" in status_lower: current_idx = 2
+    elif "delay" in status_lower or "exception" in status_lower or "return" in status_lower: current_idx = 2
     
     icons = ["📦", "📤", "🚚", "🛵", "✅"]
     
@@ -52,64 +53,81 @@ def show(api):
         
     tracking_no = s.get('tracking_number', 'UNKNOWN')
     status = s.get('status', 'Unknown')
-    carrier = s.get('carrier', 'Unknown')
-    
+    latest_loc = s.get('current_location', 'Unknown')
+    last_updated = s.get('last_updated', 'Unknown')
+    if last_updated and 'T' in last_updated:
+        last_updated = last_updated.split('T')[0] + " " + last_updated.split('T')[1][:5]
+        
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown(f"<h1 style='margin:0; font-size:2.5rem;'>{tracking_no}</h1>", unsafe_allow_html=True)
+    with col2:
+        if st.button("Refresh Status 🔄"):
+            with st.spinner("Refreshing..."):
+                api.refresh_shipment(sid)
+                st.rerun()
+                
     st.markdown(f"""
-        <div style="display:flex; align-items:center; gap: 1rem; margin-bottom: 1rem;">
-            <h1 style="margin:0; font-size:2rem;">{tracking_no}</h1>
-            {render_status_badge(status)}
+        <div style="margin-bottom: 2rem; background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
+            <div style="display:flex; justify-content: space-between;">
+                <div>
+                    <p class="text-muted" style="margin:0; font-size: 0.9rem;">CURRENT STATUS</p>
+                    <h3 style="margin:0;">{render_status_badge(status)}</h3>
+                </div>
+                <div>
+                    <p class="text-muted" style="margin:0; font-size: 0.9rem;">LATEST KNOWN LOCATION</p>
+                    <h3 style="margin:0;">{latest_loc}</h3>
+                </div>
+                <div>
+                    <p class="text-muted" style="margin:0; font-size: 0.9rem;">LAST SCAN</p>
+                    <h4 style="margin:0;">{last_updated}</h4>
+                </div>
+            </div>
         </div>
-        <p class="text-muted" style="margin-top:-0.5rem; margin-bottom:2rem;">Carrier: {carrier}</p>
     """, unsafe_allow_html=True)
     
+    st.markdown("<h4>Journey Progress</h4>", unsafe_allow_html=True)
     render_progress_bar(status)
     
-    # Info Grid
-    st.markdown("<h3>Shipment Details</h3>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown(f"**Origin:** {s.get('origin', 'N/A')}")
-        st.markdown(f"**Destination:** {s.get('destination', 'N/A')}")
-        st.markdown(f"**Current Location:** {s.get('current_location', 'N/A')}")
-    with col2:
-        st.markdown(f"**Booked Date:** {s.get('booked_date', 'N/A')}")
-        st.markdown(f"**Expected Delivery:** {s.get('expected_delivery', 'N/A')}")
-        st.markdown(f"**Last Updated:** {s.get('last_updated', 'N/A')}")
-    with col3:
-        st.markdown(f"**Category:** {s.get('category', 'General')}")
-        st.markdown(f"**Priority:** {s.get('priority', 'Normal')}")
-        st.markdown(f"**Description:** {s.get('description', 'N/A')}")
-        
-    st.markdown("<hr style='border-color: var(--border-color);'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color: var(--border-color); margin: 2rem 0;'>", unsafe_allow_html=True)
+    
+    history = api.get_tracking_history(sid)
+    
+    # Map Section
+    st.markdown("<h3>Journey Map</h3>", unsafe_allow_html=True)
+    render_journey_map(history)
+    
+    st.markdown("<hr style='border-color: var(--border-color); margin: 2rem 0;'>", unsafe_allow_html=True)
     
     c_tl, c_ai = st.columns([3, 2])
     
     with c_tl:
-        st.markdown("<h3>Tracking Timeline</h3>", unsafe_allow_html=True)
-        history = api.get_tracking_history(sid)
+        st.markdown("<h3>Tracking History</h3>", unsafe_allow_html=True)
         render_timeline(history)
         
     with c_ai:
         st.markdown("<h3>AI Insights</h3>", unsafe_allow_html=True)
         summary = api.get_ai_summary(sid)
         if not summary:
-            if st.button("✨ Generate AI Summary", type="primary"):
-                with st.spinner("Analyzing..."):
+            if st.button("✨ Explain Current Status", type="primary"):
+                with st.spinner("Analyzing tracking data..."):
                     api.generate_ai_summary(sid)
                     st.rerun()
         else:
-            # We must use summary.get('summary') since ai_service sets 'summary', not 'text'
             st.info(summary.get('summary', 'No summary available.'))
-            st.caption("🤖 *AI-Generated Summary: This is an interpretation of structured tracking data, not an official carrier statement.*")
+            st.caption("🤖 *AI-Generated Summary: This is an interpretation of known scan data, not live telemetry.*")
             
             delay_analysis = summary.get('delay_analysis')
             if delay_analysis:
-                st.markdown(f"**Delay Analysis:** {delay_analysis}")
+                st.markdown(f"**Analysis:** {delay_analysis}")
                 
             prediction = summary.get('prediction')
             if prediction:
-                st.markdown(f"**Prediction:** {prediction}")
-            
-    if st.button("Refresh Status 🔄"):
-        api.refresh_shipment(sid)
-        st.rerun()
+                st.markdown(f"**Expectation:** {prediction}")
+                
+        # Show sync status
+        st.markdown("<h4 style='margin-top: 2rem;'>Sync Status</h4>", unsafe_allow_html=True)
+        st.caption(f"Last Successful: {s.get('last_successful_sync', 'Never')}")
+        st.caption(f"Last Attempted: {s.get('last_attempted_sync', 'Never')}")
+        if s.get('last_error'):
+            st.error(f"Error: {s.get('last_error')}")
