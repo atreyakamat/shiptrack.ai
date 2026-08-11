@@ -2,15 +2,15 @@ import streamlit as st
 from components.status_badge import render_status_badge
 
 def render_shipment_row(shipment):
-    tracking_no = shipment.get('tracking_number', 'UNKNOWN')
-    desc = shipment.get('description', 'No description')
-    status = shipment.get('status', 'UNKNOWN')
-    location = shipment.get('current_location', 'Unknown Location')
-    carrier = shipment.get('carrier', 'Unknown Carrier')
-    updated = shipment.get('last_updated', 'Unknown')
-    origin = shipment.get('origin') or 'Unknown Origin'
-    destination = shipment.get('destination') or 'Unknown Destination'
-    is_archived = shipment.get('is_archived', False)
+    tracking_no = shipment.get('tracking_number') or 'UNKNOWN'
+    desc = shipment.get('description') or 'No description'
+    status = shipment.get('status') or 'UNKNOWN'
+    location = shipment.get('current_location') or 'Location unavailable'
+    carrier = shipment.get('carrier') or 'Unknown Carrier'
+    updated = shipment.get('last_updated') or 'Unknown'
+    origin = shipment.get('origin') or 'Origin unavailable'
+    destination = shipment.get('destination') or 'Destination unavailable'
+    is_archived = shipment.get('is_archived') or False
     
     # Calculate days in transit if possible
     booked_at = shipment.get('booked_at')
@@ -63,4 +63,4 @@ def render_shipment_row(shipment):
     </div>
     """
     
-    st.markdown(html, unsafe_allow_html=True)
+    st.html(html)

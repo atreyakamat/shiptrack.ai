@@ -24,11 +24,19 @@ class TrackingEvent(db.Model):
     )
 
     def to_dict(self):
+        # Derive timestamp if missing
+        timestamp = None
+        if self.event_timestamp:
+            timestamp = self.event_timestamp.isoformat()
+        elif self.event_date:
+            ts_str = self.event_date
+            if self.event_time:
+                ts_str += f"T{self.event_time}"
+            timestamp = ts_str
+            
         return {
             'id': self.id,
             'shipment_id': self.shipment_id,
-            'event_date': self.event_date,
-            'event_time': self.event_time,
             'status': self.status,
             'location': self.location,
             'location_code': self.location_code,
@@ -37,6 +45,6 @@ class TrackingEvent(db.Model):
             'description': self.description,
             'raw_status': self.raw_status,
             'source': self.source,
-            'event_timestamp': self.event_timestamp.isoformat() if self.event_timestamp else None,
+            'event_timestamp': timestamp,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

@@ -43,33 +43,42 @@ class ShipTrackAPI:
         try:
             response.raise_for_status()
             json_data = response.json()
-            # If backend uses standard format {success: True, data: ...}
             if isinstance(json_data, dict) and 'success' in json_data:
                 if json_data['success']:
                     return json_data.get('data')
                 else:
                     msg = json_data.get('error', {}).get('message', 'Unknown Error')
-                    st.error(f"API Error: {msg}")
+                    st.error(f"{msg}")
                     return None
             return json_data
         except requests.exceptions.HTTPError as e:
-            try:
-                err_data = response.json()
-                if isinstance(err_data, dict) and 'error' in err_data:
-                    if isinstance(err_data['error'], dict):
-                        msg = err_data['error'].get('message', str(e))
-                    else:
-                        msg = err_data['error']
-                else:
-                    msg = str(e)
-            except:
-                msg = str(e)
-            st.error(f"API Error: {msg}")
-            logger.error(f"API Error: {msg}")
+            code = response.status_code
+            if code == 401:
+                st.error("Your session has expired. Please sign in again.")
+            elif code == 404:
+                st.error("Shipment or resource not found.")
+            elif code == 429:
+                st.error("Too many requests. Please wait a moment.")
+            elif code == 503:
+                st.error("Tracking service is currently unavailable.")
+            elif code >= 500:
+                st.error("ShipTrack AI encountered an internal server error.")
+            else:
+                try:
+                    err_data = response.json()
+                    msg = err_data.get('error', {}).get('message', 'An error occurred.')
+                    st.error(f"{msg}")
+                except:
+                    st.error("An unexpected error occurred.")
             return None
-        except Exception as e:
-            st.error(f"Connection Error: {str(e)}")
-            logger.error(f"Connection Error: {str(e)}")
+        except requests.exceptions.ConnectionError:
+            st.error("ShipTrack AI could not connect to the server.")
+            return None
+        except requests.exceptions.Timeout:
+            st.error("The request timed out. Please try again.")
+            return None
+        except Exception:
+            st.error("An unexpected error occurred.")
             return None
 
     def health_check(self) -> dict:
@@ -189,7 +198,7 @@ class ShipTrackAPI:
 
     def get_ai_summary(self, shipment_id: str) -> dict:
         try:
-            res = self.session.get(f"{self.base_url}/ai/summary/{shipment_id}")
+            res = self.session.get(f"{self.base_url}/ai/{shipment_id}/summary")
             return self._handle_response(res)
         except requests.exceptions.RequestException as e:
             st.error(f"Failed to fetch AI summary: {e}")
@@ -197,7 +206,7 @@ class ShipTrackAPI:
 
     def generate_ai_summary(self, shipment_id: str) -> dict:
         try:
-            res = self.session.post(f"{self.base_url}/ai/summary/{shipment_id}/generate")
+            res = self.session.post(f"{self.base_url}/ai/{shipment_id}/generate")
             return self._handle_response(res)
         except requests.exceptions.RequestException as e:
             st.error(f"Failed to generate AI summary: {e}")

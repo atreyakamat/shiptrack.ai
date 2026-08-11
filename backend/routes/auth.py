@@ -49,8 +49,23 @@ def login():
         
     user = User.query.filter_by(email=email).first()
     
-    if user:
-        token = generate_token(user.id)
-        return jsonify({'success': True, 'data': {'token': token, 'user': user.to_dict()}}), 200
+    if not user:
+        # Auto-register if user doesn't exist for seamless passwordless login
+        user = User(email=email)
+        user.set_password('default')
+        db.session.add(user)
+        db.session.commit()
         
-    return jsonify({'success': False, 'error': {'code': 'UNAUTHORIZED', 'message': 'User not found'}}), 401
+        default_prefs = [
+            NotificationPreference(user_id=user.id, event_type='SHIPMENT_ADDED', in_app=True),
+            NotificationPreference(user_id=user.id, event_type='STATUS_CHANGED', in_app=True),
+            NotificationPreference(user_id=user.id, event_type='OUT_FOR_DELIVERY', in_app=True, whatsapp=True),
+            NotificationPreference(user_id=user.id, event_type='DELIVERED', in_app=True, whatsapp=True),
+            NotificationPreference(user_id=user.id, event_type='DELAYED', in_app=True, email=True),
+            NotificationPreference(user_id=user.id, event_type='REFRESH_FAILED', in_app=True)
+        ]
+        db.session.bulk_save_objects(default_prefs)
+        db.session.commit()
+    
+    token = generate_token(user.id)
+    return jsonify({'success': True, 'data': {'token': token, 'user': user.to_dict()}}), 200

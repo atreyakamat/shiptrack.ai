@@ -27,14 +27,9 @@ def render_progress_bar(status):
         c_class = "completed" if is_completed else "active" if is_active else ""
         l_class = "active" if (is_active or is_completed) else ""
         
-        html += f"""
-        <div class="progress-step">
-            <div class="step-icon {c_class}">{icons[i]}</div>
-            <div class="step-label {l_class}">{stage}</div>
-        </div>
-        """
+        html += f'<div class="progress-step"><div class="step-icon {c_class}">{icons[i]}</div><div class="step-label {l_class}">{stage}</div></div>'
     html += '</div></div>'
-    st.markdown(html, unsafe_allow_html=True)
+    st.html(html)
 
 def show(api):
     if st.button("← Back to Shipments"):
@@ -51,23 +46,23 @@ def show(api):
         st.error("Could not load shipment details.")
         return
         
-    tracking_no = s.get('tracking_number', 'UNKNOWN')
-    status = s.get('status', 'Unknown')
-    latest_loc = s.get('current_location', 'Unknown')
-    last_updated = s.get('last_updated', 'Unknown')
-    if last_updated and 'T' in last_updated:
+    tracking_no = s.get('tracking_number') or 'UNKNOWN'
+    status = s.get('status') or 'Unknown'
+    latest_loc = s.get('current_location') or 'Location unavailable'
+    last_updated = s.get('last_updated') or 'Time unavailable'
+    if last_updated != 'Time unavailable' and 'T' in last_updated:
         last_updated = last_updated.split('T')[0] + " " + last_updated.split('T')[1][:5]
         
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.markdown(f"<h1 style='margin:0; font-size:2.5rem;'>{tracking_no}</h1>", unsafe_allow_html=True)
+        st.html(f"<h1 style='margin:0; font-size:2.5rem;'>{tracking_no}</h1>")
     with col2:
         if st.button("Refresh Status 🔄"):
             with st.spinner("Refreshing..."):
                 api.refresh_shipment(sid)
                 st.rerun()
                 
-    st.markdown(f"""
+    st.html(f"""
         <div style="margin-bottom: 2rem; background: var(--bg-card); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color);">
             <div style="display:flex; justify-content: space-between;">
                 <div>
@@ -84,7 +79,7 @@ def show(api):
                 </div>
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """)
     
     st.markdown("<h4>Journey Progress</h4>", unsafe_allow_html=True)
     render_progress_bar(status)
