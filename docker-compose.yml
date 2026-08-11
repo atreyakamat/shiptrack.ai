@@ -8,7 +8,7 @@ services:
     depends_on:
       - backend
       - frontend
-    restart: always
+    restart: unless-stopped
 
   backend:
     build:
@@ -25,7 +25,7 @@ services:
         condition: service_healthy
     volumes:
       - ./uploads:/app/uploads
-    restart: always
+    restart: unless-stopped
 
   scheduler:
     build:
@@ -43,7 +43,7 @@ services:
         condition: service_healthy
       backend:
         condition: service_started
-    restart: always
+    restart: unless-stopped
 
   frontend:
     build:
@@ -53,22 +53,22 @@ services:
       - API_URL=http://nginx:80/api
     depends_on:
       - backend
-    restart: always
+    restart: unless-stopped
 
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=shiptrack
-      - POSTGRES_PASSWORD=shiptrack_pass
-      - POSTGRES_DB=shiptrack
+      - POSTGRES_USER=${POSTGRES_USER:-shiptrack}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-shiptrack}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shiptrack"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shiptrack}"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: always
+    restart: unless-stopped
 
 volumes:
   pgdata:
