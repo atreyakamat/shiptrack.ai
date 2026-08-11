@@ -15,9 +15,9 @@ class ShipTrackAPI:
     def set_token(self, token):
         self.session.headers.update({'Authorization': f'Bearer {token}'})
         
-    def login(self, email, password):
+    def login(self, email):
         try:
-            res = self.session.post(f"{self.base_url}/auth/login", json={"email": email, "password": password})
+            res = self.session.post(f"{self.base_url}/auth/login", json={"email": email})
             data = self._handle_response(res)
             if data and 'token' in data:
                 self.set_token(data['token'])
@@ -27,9 +27,9 @@ class ShipTrackAPI:
             st.error(f"Login failed: {e}")
             return None
 
-    def register(self, email, password):
+    def register(self, email):
         try:
-            res = self.session.post(f"{self.base_url}/auth/register", json={"email": email, "password": password})
+            res = self.session.post(f"{self.base_url}/auth/register", json={"email": email})
             data = self._handle_response(res)
             if data and 'token' in data:
                 self.set_token(data['token'])

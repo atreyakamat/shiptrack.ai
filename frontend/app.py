@@ -35,11 +35,9 @@ if 'current_page' not in st.session_state:
     st.session_state['current_page'] = 'dashboard'
 
 # Initialize API Client
-@st.cache_resource
-def get_api():
-    return ShipTrackAPI()
-
-api = get_api()
+if 'api_client' not in st.session_state:
+    st.session_state.api_client = ShipTrackAPI()
+api = st.session_state.api_client
 
 # Fetch health status on load
 if 'api_health' not in st.session_state:

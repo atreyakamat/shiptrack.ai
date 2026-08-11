@@ -11,14 +11,13 @@ def show(api):
         with tab1:
             with st.form("login_form"):
                 email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
                 submit = st.form_submit_button("Log In", use_container_width=True)
                 
                 if submit:
-                    if not email or not password:
-                        st.error("Please enter email and password.")
+                    if not email:
+                        st.error("Please enter email.")
                     else:
-                        token = api.login(email, password)
+                        token = api.login(email)
                         if token:
                             st.session_state.auth_token = token
                             st.rerun()
@@ -26,14 +25,13 @@ def show(api):
         with tab2:
             with st.form("register_form"):
                 reg_email = st.text_input("Email")
-                reg_password = st.text_input("Password", type="password")
                 reg_submit = st.form_submit_button("Register", use_container_width=True)
                 
                 if reg_submit:
-                    if not reg_email or not reg_password:
-                        st.error("Please enter email and password.")
+                    if not reg_email:
+                        st.error("Please enter email.")
                     else:
-                        token = api.register(reg_email, reg_password)
+                        token = api.register(reg_email)
                         if token:
                             st.session_state.auth_token = token
                             st.success("Registration successful! Logging in...")

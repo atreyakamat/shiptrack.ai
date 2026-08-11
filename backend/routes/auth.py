@@ -11,16 +11,15 @@ auth_bp = Blueprint('auth', __name__)
 def register():
     data = request.json
     email = data.get('email')
-    password = data.get('password')
     
-    if not email or not password:
-        return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'Email and password are required'}}), 400
+    if not email:
+        return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'Email is required'}}), 400
         
     if User.query.filter_by(email=email).first():
         return jsonify({'success': False, 'error': {'code': 'CONFLICT', 'message': 'Email already exists'}}), 409
         
     user = User(email=email)
-    user.set_password(password)
+    user.set_password('default') # Keep a dummy password for internal constraints if needed
     db.session.add(user)
     db.session.commit()
     
@@ -44,15 +43,14 @@ def register():
 def login():
     data = request.json
     email = data.get('email')
-    password = data.get('password')
     
-    if not email or not password:
-        return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'Email and password are required'}}), 400
+    if not email:
+        return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'Email is required'}}), 400
         
     user = User.query.filter_by(email=email).first()
     
-    if user and user.check_password(password):
+    if user:
         token = generate_token(user.id)
         return jsonify({'success': True, 'data': {'token': token, 'user': user.to_dict()}}), 200
         
-    return jsonify({'success': False, 'error': {'code': 'UNAUTHORIZED', 'message': 'Invalid credentials'}}), 401
+    return jsonify({'success': False, 'error': {'code': 'UNAUTHORIZED', 'message': 'User not found'}}), 401
