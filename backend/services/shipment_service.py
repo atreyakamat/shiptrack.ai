@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class ShipmentService:
     @staticmethod
-    def create_shipment(data: Dict[str, Any]) -> Shipment:
+    def create_shipment(user_id: int, data: Dict[str, Any]) -> Shipment:
         try:
             from backend.utils.validators import validate_tracking_number, normalize_tracking_number
             tracking_num = data.get('tracking_number')

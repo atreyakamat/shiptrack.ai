@@ -55,7 +55,12 @@ class TrackingService:
 
     @staticmethod
     def refresh_shipment(shipment_id: int) -> Dict[str, Any]:
-        log = RefreshLog(shipment_id=shipment_id, started_at=datetime.now(timezone.utc), status='processing')
+        # We need the shipment to know the user_id for the log
+        shipment = db.session.query(Shipment).get(shipment_id)
+        if not shipment:
+            return {'status': 'error', 'error_message': 'Shipment not found'}
+            
+        log = RefreshLog(user_id=shipment.user_id, shipment_id=shipment_id, started_at=datetime.now(timezone.utc), status='processing')
         db.session.add(log)
         db.session.commit()
         
@@ -145,11 +150,14 @@ class TrackingService:
         return {'status': log.status, 'events_added': log.events_found}
 
     @staticmethod
-    def refresh_all_active():
-        shipments = Shipment.query.filter(
+    def refresh_all_active(user_id: int = None):
+        query = Shipment.query.filter(
             Shipment.is_archived == False,
             Shipment.status != 'DELIVERED'
-        ).all()
+        )
+        if user_id:
+            query = query.filter_by(user_id=user_id)
+        shipments = query.all()
         for shipment in shipments:
             try:
                 TrackingService.refresh_shipment(shipment.id)

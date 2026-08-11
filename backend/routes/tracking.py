@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, g
 from backend.services.tracking_service import TrackingService
 from backend.services.shipment_service import ShipmentService
 from backend.utils.auth import token_required
@@ -13,6 +13,11 @@ tracking_bp = Blueprint('tracking', __name__)
 @limiter.limit("10 per minute")
 def refresh_shipment(id):
     try:
+        # We verify shipment belongs to user first
+        shipment = ShipmentService.get_shipment(g.current_user.id, id)
+        if not shipment:
+            return jsonify({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Shipment not found'}}), 404
+            
         result = TrackingService.refresh_shipment(id)
         if result.get('status') == 'error':
             return jsonify({'success': False, 'error': {'code': 'REFRESH_ERROR', 'message': result.get('error_message', 'Unknown error')}}), 500
@@ -26,7 +31,7 @@ def refresh_shipment(id):
 @limiter.limit("2 per minute")
 def refresh_all():
     try:
-        TrackingService.refresh_all_active()
+        TrackingService.refresh_all_active(g.current_user.id)
         return jsonify({'success': True, 'message': 'Background refresh started'}), 202
     except Exception as e:
         logger.error(f"Error refreshing all: {e}")
@@ -36,7 +41,7 @@ def refresh_all():
 @token_required
 def get_history(id):
     try:
-        shipment = ShipmentService.get_shipment(id)
+        shipment = ShipmentService.get_shipment(g.current_user.id, id)
         if not shipment:
             return jsonify({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Shipment not found'}}), 404
         return jsonify({'success': True, 'data': [e.to_dict() for e in shipment.tracking_events]}), 200

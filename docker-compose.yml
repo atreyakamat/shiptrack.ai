@@ -1,21 +1,40 @@
 version: '3.8'
 
 services:
-  app:
-    build: .
+  nginx:
+    image: nginx:alpine
     ports:
-      - "5000:5000"
-      - "8501:8501"
+      - "80:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
     environment:
       - FLASK_ENV=production
       - DATABASE_URL=postgresql://shiptrack:shiptrack_pass@db:5432/shiptrack
-      - SECRET_KEY=generate-a-secure-secret-key-here
-      - ADMIN_PASSWORD_HASH=pbkdf2:sha256:1000000$replace_with_real_hash
+      - SECRET_KEY=${SECRET_KEY:-generate-a-secure-secret-key-here}
     depends_on:
       db:
         condition: service_healthy
     volumes:
       - ./uploads:/app/uploads
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    environment:
+      - API_URL=http://nginx:80/api
+    depends_on:
+      - backend
     restart: always
 
   db:
@@ -24,8 +43,6 @@ services:
       - POSTGRES_USER=shiptrack
       - POSTGRES_PASSWORD=shiptrack_pass
       - POSTGRES_DB=shiptrack
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

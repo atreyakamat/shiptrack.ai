@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, g
 from backend.services.ai_service import AIService
 from backend.services.shipment_service import ShipmentService
 from backend.models.shipment import Shipment
@@ -15,11 +15,11 @@ ai_bp = Blueprint('ai', __name__)
 @limiter.limit("20 per minute")
 def get_summary(shipment_id):
     try:
-        summary = AISummary.query.filter_by(shipment_id=shipment_id).first()
+        summary = AISummary.query.filter_by(shipment_id=shipment_id, user_id=g.current_user.id).first()
         if summary:
             return jsonify({'success': True, 'data': summary.to_dict()}), 200
             
-        shipment = ShipmentService.get_shipment(shipment_id)
+        shipment = ShipmentService.get_shipment(g.current_user.id, shipment_id)
         if not shipment:
             return jsonify({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Shipment not found'}}), 404
             
@@ -34,7 +34,7 @@ def get_summary(shipment_id):
 @limiter.limit("10 per minute")
 def generate_summary(shipment_id):
     try:
-        shipment = ShipmentService.get_shipment(shipment_id)
+        shipment = ShipmentService.get_shipment(g.current_user.id, shipment_id)
         if not shipment:
             return jsonify({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Shipment not found'}}), 404
             
@@ -49,7 +49,7 @@ def generate_summary(shipment_id):
 @limiter.limit("5 per minute")
 def get_insights():
     try:
-        shipments = Shipment.query.filter_by(is_archived=False).all()
+        shipments = Shipment.query.filter_by(user_id=g.current_user.id, is_archived=False).all()
         result = AIService.generate_insights(shipments)
         return jsonify({'success': True, 'data': result}), 200
     except Exception as e:

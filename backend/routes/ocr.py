@@ -1,7 +1,7 @@
 import os
 import logging
 import time
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from werkzeug.utils import secure_filename
 from backend.services.ocr_service import OCRService
 from backend.utils.validators import ALLOWED_FILE_EXTENSIONS, validate_file_upload, generate_safe_filename
@@ -37,6 +37,7 @@ def process_ocr():
             result = OCRService.process_image(file_path)
             
             doc = OCRDocument(
+                user_id=g.current_user.id,
                 filename=file.filename,
                 file_path=file_path,
                 ocr_text=result.get('full_text'),
@@ -76,11 +77,11 @@ def confirm_ocr():
         doc_id = data.get('document_id')
         tracking_number = data.get('tracking_number')
         
-        doc = OCRDocument.query.get(doc_id)
+        doc = OCRDocument.query.filter_by(id=doc_id, user_id=g.current_user.id).first()
         if not doc:
             return jsonify({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Document not found'}}), 404
             
-        shipment = ShipmentService.create_shipment({
+        shipment = ShipmentService.create_shipment(g.current_user.id, {
             'tracking_number': tracking_number,
             'carrier': data.get('carrier', 'india_post')
         })

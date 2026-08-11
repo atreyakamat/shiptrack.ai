@@ -69,9 +69,9 @@ class AIService:
             elif health == 'WATCH':
                 delay_analysis = "Shipment is progressing slower than usual, but is still moving."
 
-            summary = AISummary.query.filter_by(shipment_id=shipment.id).first()
+            summary = AISummary.query.filter_by(shipment_id=shipment.id, user_id=shipment.user_id).first()
             if not summary:
-                summary = AISummary(shipment_id=shipment.id)
+                summary = AISummary(shipment_id=shipment.id, user_id=shipment.user_id)
                 db.session.add(summary)
             
             summary.summary = summary_text

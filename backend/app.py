@@ -36,22 +36,33 @@ def create_app(config_name='default'):
         
     return app
 
-def seed_db():
-    from backend.models.shipment import Shipment
-    from backend.services.shipment_service import ShipmentService
-    from backend.services.tracking_service import TrackingService
-    from backend.carriers.mock import MockCarrierAdapter
+def seed_db(app):
+    with app.app_context():
+        from backend.models.shipment import Shipment
+        from backend.models.user import User
+        from backend.services.shipment_service import ShipmentService
+        from backend.services.tracking_service import TrackingService
+        from backend.carriers.mock import MockCarrierAdapter
+        from werkzeug.security import generate_password_hash
 
-    if Shipment.query.count() == 0:
-        adapter = MockCarrierAdapter()
-        for tracking_number in adapter.demo_data.keys():
-            shipment = ShipmentService.create_shipment({
-                'tracking_number': tracking_number,
-                'carrier': 'mock',
-                'description': f'Demo shipment {tracking_number}'
-            })
-            TrackingService.refresh_shipment(shipment.id)
+        if User.query.count() == 0:
+            default_user = User(
+                email="demo@shiptrack.ai",
+                password_hash=generate_password_hash("demo123")
+            )
+            db.session.add(default_user)
+            db.session.commit()
+            
+            adapter = MockCarrierAdapter()
+            for tracking_number in adapter.demo_data.keys():
+                shipment = ShipmentService.create_shipment(default_user.id, {
+                    'tracking_number': tracking_number,
+                    'carrier': 'mock',
+                    'description': f'Demo shipment {tracking_number}'
+                })
+                TrackingService.refresh_shipment(shipment.id)
 
 if __name__ == '__main__':
     app = create_app()
+    seed_db(app)
     app.run(debug=True, host='0.0.0.0', port=5000)

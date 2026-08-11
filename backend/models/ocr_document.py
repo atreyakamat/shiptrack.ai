@@ -5,6 +5,7 @@ class OCRDocument(db.Model):
     __tablename__ = 'ocr_document'
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     shipment_id = db.Column(db.Integer, db.ForeignKey('shipment.id'), nullable=True)
     filename = db.Column(db.String(255))
     file_path = db.Column(db.String(500))

@@ -5,6 +5,7 @@ class RefreshLog(db.Model):
     __tablename__ = 'refresh_log'
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     shipment_id = db.Column(db.Integer, db.ForeignKey('shipment.id'), nullable=True)
     started_at = db.Column(db.DateTime)
     completed_at = db.Column(db.DateTime)

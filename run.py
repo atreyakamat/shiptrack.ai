@@ -6,9 +6,10 @@ import sys
 # Add project root to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from backend.app import create_app
+from backend.app import create_app, seed_db
 
 app = create_app()
+seed_db(app)
 
 if __name__ == '__main__':
     port = int(os.getenv('FLASK_RUN_PORT', '5000'))

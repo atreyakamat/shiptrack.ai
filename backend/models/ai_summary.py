@@ -5,6 +5,7 @@ class AISummary(db.Model):
     __tablename__ = 'ai_summary'
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     shipment_id = db.Column(db.Integer, db.ForeignKey('shipment.id'), nullable=False)
     summary = db.Column(db.Text)
     delay_analysis = db.Column(db.Text)
