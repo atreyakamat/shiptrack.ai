@@ -6,8 +6,6 @@ def show(api):
     st.caption("🤖 *AI-Generated Insights: This is an interpretation of structured tracking data, not official carrier statements.*")
     
     health = st.session_state.get('api_health', {})
-    if health.get('demo_mode', False):
-        st.warning("Running in Demo Mode - AI Insights may be simulated.")
         
     if st.button("✨ Generate Fresh Insights", type="primary"):
         with st.spinner("Analyzing shipping patterns..."):

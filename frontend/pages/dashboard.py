@@ -8,8 +8,6 @@ def show(api):
     st.markdown("<h2>Good afternoon, Atreya</h2>", unsafe_allow_html=True)
     
     health = st.session_state.get('api_health', {})
-    if health.get('demo_mode') or health.get('tracking_provider') == 'mock':
-        st.warning("⚠️ **DEMO MODE ACTIVE** - Tracking data is simulated. Real Carrier API connections are disabled or unavailable.")
         
     st.markdown("<p class='text-muted'>Your shipment overview</p>", unsafe_allow_html=True)
     
