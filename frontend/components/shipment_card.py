@@ -1,6 +1,8 @@
 import streamlit as st
 from components.status_badge import render_status_badge
 
+import textwrap
+
 def render_shipment_row(shipment):
     tracking_no = shipment.get('tracking_number') or 'UNKNOWN'
     desc = shipment.get('description') or 'No description'
@@ -12,6 +14,11 @@ def render_shipment_row(shipment):
     destination = shipment.get('destination') or 'Destination unavailable'
     is_archived = shipment.get('is_archived') or False
     
+    if str(desc).strip().lower() == "none":
+        desc = "No description"
+    if str(location).strip().lower() == "none":
+        location = "Location unavailable"
+        
     # Calculate days in transit if possible
     booked_at = shipment.get('booked_at')
     days_in_transit_html = ""
@@ -63,4 +70,4 @@ def render_shipment_row(shipment):
     </div>
     """
     
-    st.html(html)
+    st.markdown(textwrap.dedent(html).strip(), unsafe_allow_html=True)
