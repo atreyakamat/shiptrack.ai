@@ -62,8 +62,8 @@ def test_tracking_event_serialization(app):
         d = event.to_dict()
         assert d['status'] == "Item Dispatched"
         assert d['location'] == "Panaji H.O."
-        # Because we provided event_date and event_time, they should be merged to event_timestamp
-        assert d['event_timestamp'] == "05/08/2026T12:15 PM"
+        # Because we provided event_date and event_time, they should be merged to event_timestamp in ISO format
+        assert d['event_timestamp'] == "2026-08-05T12:15:00"
         # The separated date/time keys should NOT be present
         assert 'event_date' not in d
         assert 'event_time' not in d

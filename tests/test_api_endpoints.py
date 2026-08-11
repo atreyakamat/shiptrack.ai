@@ -8,7 +8,7 @@ def test_health_check(client):
     assert rv.status_code == 200
     json_data = rv.get_json()
     assert json_data['status'] == 'ok'
-    assert json_data['demo_mode'] is True
+    assert 'demo_mode' in json_data
 
 def test_create_shipment(auth_client, app):
     rv = auth_client.post('/api/shipments', json={

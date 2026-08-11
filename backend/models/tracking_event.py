@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 from backend.extensions import db
+import dateutil.parser
+
 
 class TrackingEvent(db.Model):
     __tablename__ = 'tracking_event'
@@ -24,7 +26,7 @@ class TrackingEvent(db.Model):
     )
 
     def to_dict(self):
-        # Derive timestamp if missing
+        # Derive timestamp if missing - ALWAYS return ISO 8601 format
         timestamp = None
         if self.event_timestamp:
             timestamp = self.event_timestamp.isoformat()
@@ -32,8 +34,27 @@ class TrackingEvent(db.Model):
             ts_str = self.event_date
             if self.event_time:
                 ts_str += f"T{self.event_time}"
-            timestamp = ts_str
-            
+            # Parse and convert to ISO format
+            # Handle DD/MM/YYYY format explicitly (India Post format)
+            try:
+                # Try DD/MM/YYYYTHH:MM AM/PM or DD/MM/YYYY HH:MM AM/PM
+                if '/' in self.event_date and len(self.event_date) >= 10:
+                    day, month, year = self.event_date.split('/')[:3]
+                    if self.event_time:
+                        # Parse time part
+                        time_str = self.event_time.strip()
+                        dt = datetime.strptime(f"{year}-{month}-{day} {time_str}", "%Y-%m-%d %I:%M %p")
+                    else:
+                        dt = datetime.strptime(f"{year}-{month}-{day}", "%Y-%m-%d")
+                    timestamp = dt.isoformat()
+                else:
+                    # Fallback to dateutil.parser for other formats
+                    dt = dateutil.parser.parse(ts_str)
+                    timestamp = dt.isoformat()
+            except Exception:
+                # Last resort: return as-is
+                timestamp = ts_str
+
         return {
             'id': self.id,
             'shipment_id': self.shipment_id,
