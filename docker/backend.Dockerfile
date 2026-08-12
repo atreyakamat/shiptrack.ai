@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.13-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy requirements and install
-COPY backend/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir gunicorn psycopg2-binary
 
@@ -18,11 +18,11 @@ RUN pip install --no-cache-dir gunicorn psycopg2-binary
 COPY backend/ /app/backend/
 
 # Environment variables
-ENV FLASK_APP=backend.app:create_app()
+ENV FLASK_APP="backend.app:create_app('production')"
 ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
 
 EXPOSE 5000
 
 # Start Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "backend.app:create_app()"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "backend.app:create_app('production')"]
