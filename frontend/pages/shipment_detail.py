@@ -81,7 +81,7 @@ def show(api):
 
     tracking_no = _clean_display(s.get('tracking_number'), 'UNKNOWN')
     raw_status = s.get('status') or 'Unknown'
-    status = raw_status.replace('_', ' ').title()
+    status = raw_status.replace('_', ' ').upper()
 
     carrier = _clean_display(s.get('carrier'), 'India Post')
     if carrier.lower() == 'india_post':

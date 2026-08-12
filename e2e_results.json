@@ -1,0 +1,107 @@
+[
+  {
+    "METHOD": "GET",
+    "ENDPOINT": "/health",
+    "STATUS": 200,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"ai_provider\":\"mock\",\"demo_mode\":false,\"status\":\"ok\",\"tracking_provider\":\"india_post\",\"version\":\"1.0.0\"}\n"
+  },
+  {
+    "METHOD": "POST",
+    "ENDPOINT": "/auth/register",
+    "STATUS": 409,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"error\":{\"code\":\"CONFLICT\",\"message\":\"Email already exists\"},\"success\":false}\n"
+  },
+  {
+    "METHOD": "POST",
+    "ENDPOINT": "/auth/login",
+    "STATUS": 200,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"data\":{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjo4LCJleHAiOjE3ODcxMTM1OTh9.IRPI3jqamm0si0ps6qn_oaG8C4PHVHGNtiX_9-xoxrc\",\"user\":{\"created_at\":\"2026-08-12T04:25:41.592514\",\"email\":\""
+  },
+  {
+    "METHOD": "POST",
+    "ENDPOINT": "/auth/login",
+    "STATUS": 401,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"error\":{\"code\":\"UNAUTHORIZED\",\"message\":\"Invalid credentials\"},\"success\":false}\n"
+  },
+  {
+    "METHOD": "GET",
+    "ENDPOINT": "/shipments",
+    "STATUS": 200,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"data\":[],\"success\":true}\n"
+  },
+  {
+    "METHOD": "POST",
+    "ENDPOINT": "/shipments",
+    "STATUS": 201,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"data\":{\"article_type\":null,\"booked_at\":null,\"carrier\":\"india_post\",\"category\":\"general\",\"created_at\":\"2026-08-12T04:26:45.191204\",\"current_location\":null,\"description\":\"Test E2E\",\"destination\":null,"
+  },
+  {
+    "METHOD": "POST",
+    "ENDPOINT": "/shipments",
+    "STATUS": 409,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"error\":{\"code\":\"DUPLICATE_SHIPMENT\",\"message\":\"This tracking number is already in your shipments.\"},\"success\":false}\n"
+  },
+  {
+    "METHOD": "POST",
+    "ENDPOINT": "/shipments",
+    "STATUS": 422,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"error\":{\"code\":\"VALIDATION_ERROR\",\"message\":\"Invalid tracking number format\"},\"success\":false}\n"
+  },
+  {
+    "METHOD": "POST",
+    "ENDPOINT": "/shipments",
+    "STATUS": 201,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"data\":{\"article_type\":null,\"booked_at\":null,\"carrier\":\"india_post\",\"category\":\"general\",\"created_at\":\"2026-08-12T04:26:51.445714\",\"current_location\":null,\"description\":\"Provider Error Test\",\"destina"
+  },
+  {
+    "METHOD": "GET",
+    "ENDPOINT": "/shipments/9",
+    "STATUS": 200,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"data\":{\"article_type\":null,\"booked_at\":null,\"carrier\":\"india_post\",\"category\":\"general\",\"created_at\":\"2026-08-12T04:26:45.191204\",\"current_location\":null,\"description\":\"Test E2E\",\"destination\":null,"
+  },
+  {
+    "METHOD": "GET",
+    "ENDPOINT": "/ai/9/summary",
+    "STATUS": 200,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"data\":{\"created_at\":\"2026-08-12T04:26:55.624312\",\"delay_analysis\":\"Insufficient tracking history to assess delays.\",\"health_status\":\"NORMAL\",\"id\":2,\"model\":\"mock\",\"prediction\":\"Awaiting movement.\",\""
+  },
+  {
+    "METHOD": "GET",
+    "ENDPOINT": "/analytics",
+    "STATUS": 200,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"data\":{\"by_status\":[{\"count\":2,\"status\":\"BOOKED\"}],\"delivery_rate\":0.0,\"overview\":{\"avg_time\":0,\"delayed\":0,\"delivered\":0,\"delivery_rate\":0.0,\"in_transit\":0,\"total\":2}},\"success\":true}\n"
+  },
+  {
+    "METHOD": "GET",
+    "ENDPOINT": "/notifications",
+    "STATUS": 200,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"data\":[{\"channel\":\"in_app\",\"created_at\":\"2026-08-12T04:26:51.478751\",\"id\":22,\"message\":\"Failed to refresh shipment 10\",\"notification_type\":\"REFRESH_FAILED\",\"sent_at\":\"2026-08-12T04:26:51.478419\",\"sh"
+  },
+  {
+    "METHOD": "POST",
+    "ENDPOINT": "/ocr",
+    "STATUS": 400,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"error\":{\"code\":\"BAD_REQUEST\",\"message\":\"No file part\"},\"success\":false}\n"
+  },
+  {
+    "METHOD": "GET",
+    "ENDPOINT": "/shipments",
+    "STATUS": 401,
+    "RESULT": "SUCCESS",
+    "DETAILS": "{\"error\":{\"code\":\"UNAUTHORIZED\",\"message\":\"Token is missing\"},\"success\":false}\n"
+  }
+]

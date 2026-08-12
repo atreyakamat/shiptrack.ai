@@ -53,23 +53,31 @@ class ShipTrackAPI:
             return json_data
         except requests.exceptions.HTTPError as e:
             code = response.status_code
-            if code == 401:
-                st.error("Your session has expired. Please sign in again.")
+            try:
+                err_data = response.json()
+                msg = err_data.get('error', {}).get('message')
+                if msg:
+                    st.error(msg)
+                    return None
+            except Exception:
+                pass
+                
+            if code in (400, 422):
+                st.error("Please check the shipment details.")
+            elif code == 401:
+                st.error("Your session has expired. Please log in again.")
+            elif code == 403:
+                st.error("You don't have permission to perform this action.")
             elif code == 404:
-                st.error("Shipment or resource not found.")
+                st.error("Shipment not found.")
+            elif code == 409:
+                st.error("This tracking number is already in your shipments.")
             elif code == 429:
                 st.error("Too many requests. Please wait a moment.")
             elif code == 503:
-                st.error("Tracking service is currently unavailable.")
-            elif code >= 500:
-                st.error("ShipTrack AI encountered an internal server error.")
+                st.error("The tracking provider is currently unavailable.")
             else:
-                try:
-                    err_data = response.json()
-                    msg = err_data.get('error', {}).get('message', 'An error occurred.')
-                    st.error(f"{msg}")
-                except:
-                    st.error("An unexpected error occurred.")
+                st.error("An unexpected server error occurred.")
             return None
         except requests.exceptions.ConnectionError:
             st.error("ShipTrack AI could not connect to the server.")

@@ -17,8 +17,16 @@ logger = logging.getLogger(__name__)
 class TrackingService:
     @staticmethod
     def get_carrier_adapter(carrier: str):
-        provider = os.getenv('TRACKING_PROVIDER', 'mock')
-        demo_mode = os.getenv('TRACKING_DEMO_MODE', 'true').lower() == 'true'
+        from backend.utils.validators import normalize_carrier
+        carrier = normalize_carrier(carrier)
+        try:
+            from flask import current_app
+            provider = current_app.config.get('TRACKING_PROVIDER', 'mock')
+            demo_mode = current_app.config.get('TRACKING_DEMO_MODE', True)
+        except RuntimeError:
+            provider = os.getenv('TRACKING_PROVIDER', 'mock')
+            demo_mode = os.getenv('TRACKING_DEMO_MODE', 'true').lower() == 'true'
+            
         if demo_mode or provider == 'mock' or carrier == 'mock':
             return MockCarrierAdapter()
         if carrier == 'india_post':
@@ -180,7 +188,10 @@ class TrackingService:
             
         log.completed_at = datetime.now(timezone.utc)
         db.session.commit()
-        return {'status': log.status, 'events_added': log.events_found}
+        result = {'status': log.status, 'events_added': log.events_found}
+        if log.status == 'error':
+            result['error_message'] = log.error_message
+        return result
 
     @staticmethod
     def refresh_all_active(user_id: int = None):

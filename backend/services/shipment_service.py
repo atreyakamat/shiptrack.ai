@@ -10,12 +10,32 @@ class ShipmentService:
     @staticmethod
     def create_shipment(user_id: int, data: Dict[str, Any]) -> Shipment:
         try:
-            from backend.utils.validators import validate_tracking_number, normalize_tracking_number
+            from backend.utils.validators import validate_tracking_number, normalize_tracking_number, normalize_carrier, validate_carrier
             tracking_num = data.get('tracking_number')
-            carrier = data.get('carrier', 'india_post')
+            carrier = normalize_carrier(data.get('carrier', ''))
+            
+            if not tracking_num:
+                raise ValueError("Tracking number is required")
+                
+            if not carrier or not validate_carrier(carrier):
+                raise ValueError("Valid carrier is required")
             
             if not validate_tracking_number(tracking_num, carrier):
                 raise ValueError("Invalid tracking number format")
+                
+            category = data.get('category', 'General')
+            priority = data.get('priority', 'Normal')
+            if category not in ['General', 'Documents', 'Package', 'Government', 'Legal', 'Personal', 'Business']:
+                raise ValueError("Invalid category")
+            if priority not in ['Normal', 'Low', 'High', 'Urgent']:
+                raise ValueError("Invalid priority")
+                
+            description = data.get('description', '')
+            notes = data.get('notes', '')
+            if description and len(description) > 500:
+                raise ValueError("Description is too long (max 500 characters)")
+            if notes and len(notes) > 5000:
+                raise ValueError("Notes are too long (max 5000 characters)")
                 
             tracking_num = normalize_tracking_number(tracking_num)
             
@@ -38,17 +58,25 @@ class ShipmentService:
             db.session.commit()
             
             # Trigger Notification
-            from backend.services.notification_service import NotificationService
-            NotificationService.trigger_event(
-                event_type='SHIPMENT_ADDED',
-                shipment_id=shipment.id,
-                message=f"New shipment added: {shipment.tracking_number}",
-                context={'tracking_number': shipment.tracking_number}
-            )
+            try:
+                from backend.services.notification_service import NotificationService
+                NotificationService.trigger_event(
+                    event_type='SHIPMENT_ADDED',
+                    shipment_id=shipment.id,
+                    message=f"New shipment added: {shipment.tracking_number}",
+                    context={'tracking_number': shipment.tracking_number}
+                )
+            except Exception as notify_err:
+                logger.warning(f"Notification failed for {shipment.id}: {notify_err}")
             
             return shipment
         except Exception as e:
             db.session.rollback()
+            # If the database enforces a unique constraint that we hit
+            import sqlalchemy.exc
+            if isinstance(e, sqlalchemy.exc.IntegrityError):
+                logger.error(f"IntegrityError creating shipment (duplicate): {e}")
+                raise ValueError("Shipment already exists")
             logger.error(f"Error creating shipment: {e}")
             raise e
 

@@ -3,11 +3,21 @@ import streamlit as st
 def show(api):
     st.markdown("<h2>Add New Shipment</h2>", unsafe_allow_html=True)
     
+    CARRIER_LABEL_TO_CODE = {
+    "India Post": "india_post",
+    "Delhivery": "delhivery",
+    "BlueDart": "bluedart",
+    "DTDC": "dtdc",
+}
+
+def show(api):
+    st.markdown("<h2>Add New Shipment</h2>", unsafe_allow_html=True)
+    
     with st.form("add_shipment_form"):
         col1, col2 = st.columns(2)
         with col1:
             tracking_number = st.text_input("Tracking Number *", placeholder="e.g. EY123456789IN")
-            carrier = st.selectbox("Carrier *", ["India Post", "Delhivery", "BlueDart", "DTDC"])
+            carrier_label = st.selectbox("Carrier *", ["India Post", "Delhivery", "BlueDart", "DTDC"])
             category = st.selectbox("Category", ["General", "Documents", "Package", "Government", "Legal", "Personal", "Business"])
             
         with col2:
@@ -18,9 +28,10 @@ def show(api):
         submit = st.form_submit_button("➕ Add Shipment", type="primary", use_container_width=True)
         
         if submit:
-            if not tracking_number or not carrier:
+            if not tracking_number or not carrier_label:
                 st.error("Tracking Number and Carrier are required.")
             else:
+                carrier = CARRIER_LABEL_TO_CODE.get(carrier_label, carrier_label.lower().replace(" ", "_"))
                 data = {
                     "tracking_number": tracking_number,
                     "carrier": carrier,

@@ -51,8 +51,8 @@ class AIService:
                 summary_text = f"Your parcel was successfully delivered at {last_location}."
                 prediction = "Already delivered."
             elif status == 'OUT_FOR_DELIVERY':
-                summary_text = f"Your parcel has reached the destination delivery office and is currently out for delivery in {last_location}. Expect it today!"
-                prediction = "Delivery expected today based on tracking data."
+                summary_text = f"Your parcel is currently out for delivery in {last_location}. It may be delivered today based on its current status."
+                prediction = "Current status suggests delivery may occur today, but no confirmed delivery date is available."
             elif status == 'ARRIVED_AT_FACILITY':
                 summary_text = f"Your parcel has arrived at a sorting facility or post office in {last_location}."
                 prediction = "Awaiting dispatch to the next location."
@@ -75,8 +75,10 @@ class AIService:
                 summary_text = f"Shipment {shipment.tracking_number} is currently {status}. Last seen at {last_location}."
                 prediction = "Awaiting more data."
                 
-            delay_analysis = "No significant delays detected."
-            if health == 'DELAYED':
+            delay_analysis = "Insufficient tracking history to assess delays."
+            if len(events) > 1 and health == 'NORMAL':
+                delay_analysis = "No significant delays detected."
+            elif health == 'DELAYED':
                 delay_analysis = "Shipment appears delayed. There have been no tracking updates for over 3 days, which is unusual."
             elif health == 'WATCH':
                 delay_analysis = "Shipment is progressing slower than usual, but is still moving."

@@ -14,15 +14,16 @@ analytics_bp = Blueprint('analytics', __name__)
 @token_required
 def get_analytics():
     try:
+        overview = AnalyticsService.get_overview_stats(g.current_user.id)
         data = {
-            'overview': AnalyticsService.get_overview_stats(g.current_user.id),
-            'delivery_rate': AnalyticsService.get_delivery_rate(g.current_user.id),
+            'overview': overview,
+            'delivery_rate': overview.get('delivery_rate', 0.0),
             'by_status': AnalyticsService.get_shipments_by_status(g.current_user.id)
         }
         return jsonify({'success': True, 'data': data}), 200
     except Exception as e:
         logger.error(f"Error getting analytics: {e}")
-        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': str(e)}}), 500
+        return jsonify({'success': False, 'error': {'code': 'ANALYTICS_ERROR', 'message': 'Failed to fetch analytics'}}), 500
 
 @analytics_bp.route('/analytics/overview', methods=['GET'])
 @token_required
@@ -32,7 +33,7 @@ def get_overview():
         return jsonify({'success': True, 'data': stats}), 200
     except Exception as e:
         logger.error(f"Error getting overview stats: {e}")
-        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': str(e)}}), 500
+        return jsonify({'success': False, 'error': {'code': 'ANALYTICS_ERROR', 'message': 'Failed to fetch overview stats'}}), 500
 
 @analytics_bp.route('/analytics/export', methods=['GET'])
 @token_required
@@ -53,4 +54,4 @@ def export_csv():
         return send_file(temp.name, as_attachment=True, download_name='shiptrack_export.csv', mimetype='text/csv')
     except Exception as e:
         logger.error(f"Error exporting CSV: {e}")
-        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': str(e)}}), 500
+        return jsonify({'success': False, 'error': {'code': 'ANALYTICS_ERROR', 'message': 'Failed to export CSV'}}), 500

@@ -24,16 +24,18 @@ def test_create_shipment(auth_client, app):
     # Test duplicate 409
     rv2 = auth_client.post('/api/shipments', json={
         'tracking_number': 'EM111222333IN',
+        'carrier': 'india_post',
         'description': 'Test Shipment 2'
     })
     assert rv2.status_code == 409
 
-    # Test invalid tracking number 400
+    # Test invalid tracking number 422
     rv3 = auth_client.post('/api/shipments', json={
         'tracking_number': '12345',
+        'carrier': 'india_post',
         'description': 'Invalid'
     })
-    assert rv3.status_code == 400
+    assert rv3.status_code == 422
 
 def test_get_shipments(auth_client, app, test_user):
     with app.app_context():

@@ -64,7 +64,7 @@ def process_ocr():
             
         except Exception as e:
             logger.error(f"Error processing OCR: {e}")
-            return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': str(e)}}), 500
+            return jsonify({'success': False, 'error': {'code': 'OCR_ERROR', 'message': 'Failed to process OCR'}}), 500
             
     return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'Invalid file type'}}), 400
 
@@ -90,6 +90,12 @@ def confirm_ocr():
         db.session.commit()
         
         return jsonify({'success': True, 'data': shipment.to_dict()}), 201
+    except ValueError as ve:
+        db.session.rollback()
+        err_msg = str(ve)
+        if "already exists" in err_msg.lower():
+            return jsonify({'success': False, 'error': {'code': 'DUPLICATE_SHIPMENT', 'message': "This tracking number is already in your shipments."}}), 409
+        return jsonify({'success': False, 'error': {'code': 'VALIDATION_ERROR', 'message': err_msg}}), 422
     except Exception as e:
         logger.error(f"Error confirming OCR: {e}")
-        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': str(e)}}), 500
+        return jsonify({'success': False, 'error': {'code': 'OCR_ERROR', 'message': 'Failed to confirm OCR'}}), 500

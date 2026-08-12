@@ -17,9 +17,22 @@ def normalize_tracking_number(number: str) -> str:
     # Remove all whitespace (spaces, tabs, newlines) and hyphens, convert to uppercase
     return re.sub(r'[\s\-]+', '', number.upper())
 
+CARRIER_LABEL_TO_CODE = {
+    'India Post': 'india_post',
+    'Delhivery': 'delhivery',
+    'BlueDart': 'bluedart',
+    'DTDC': 'dtdc',
+    'india_post': 'india_post',
+    'mock': 'mock',
+}
+
 def validate_carrier(carrier: str) -> bool:
-    supported_carriers = ['india_post', 'mock']
-    return carrier in supported_carriers
+    supported_carriers = ['india_post', 'mock', 'delhivery', 'bluedart', 'dtdc']
+    code = CARRIER_LABEL_TO_CODE.get(carrier, carrier)
+    return code in supported_carriers
+
+def normalize_carrier(carrier: str) -> str:
+    return CARRIER_LABEL_TO_CODE.get(carrier, carrier)
 
 def validate_file_upload(filename: str, max_size: int = 16 * 1024 * 1024) -> bool:
     if not filename:

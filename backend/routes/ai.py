@@ -27,7 +27,7 @@ def get_summary(shipment_id):
         return jsonify({'success': True, 'data': result}), 200
     except Exception as e:
         logger.error(f"Error getting summary: {e}")
-        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': str(e)}}), 500
+        return jsonify({'success': False, 'error': {'code': 'AI_ERROR', 'message': 'Failed to generate AI summary'}}), 500
 
 @ai_bp.route('/ai/<int:shipment_id>/generate', methods=['POST'])
 @token_required
@@ -42,7 +42,7 @@ def generate_summary(shipment_id):
         return jsonify({'success': True, 'data': result}), 200
     except Exception as e:
         logger.error(f"Error generating summary: {e}")
-        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': str(e)}}), 500
+        return jsonify({'success': False, 'error': {'code': 'AI_ERROR', 'message': 'Failed to generate AI summary'}}), 500
 
 @ai_bp.route('/ai/insights', methods=['GET', 'POST'])
 @token_required
@@ -54,4 +54,4 @@ def get_insights():
         return jsonify({'success': True, 'data': result}), 200
     except Exception as e:
         logger.error(f"Error getting insights: {e}")
-        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': str(e)}}), 500
+        return jsonify({'success': False, 'error': {'code': 'AI_ERROR', 'message': 'Failed to generate AI insights'}}), 500

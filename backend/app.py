@@ -1,6 +1,7 @@
 import os
 import logging
-from flask import Flask
+import uuid
+from flask import Flask, g, request
 from backend.config import config_map
 from backend.extensions import db, cors, migrate
 from backend.routes import register_routes
@@ -15,6 +16,16 @@ def create_app(config_name='default'):
     # Configure logging
     log_level = getattr(logging, app.config.get('LOG_LEVEL', 'INFO').upper(), logging.INFO)
     logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    # Request ID middleware
+    @app.before_request
+    def generate_request_id():
+        g.request_id = request.headers.get('X-Request-ID', str(uuid.uuid4())[:8])
+    
+    @app.after_request
+    def add_request_id_header(response):
+        response.headers['X-Request-ID'] = g.get('request_id', '')
+        return response
     
     # Init extensions
     db.init_app(app)
@@ -47,11 +58,10 @@ def seed_db(app):
 
         admin_email = os.getenv('ADMIN_EMAIL')
         admin_password = os.getenv('ADMIN_PASSWORD')
-        
         is_prod = os.getenv('FLASK_ENV', 'development') == 'production'
-        if is_prod and admin_password == 'demo123':
+        if is_prod and admin_password and len(admin_password) < 8:
             logger = logging.getLogger(__name__)
-            logger.error("FATAL SECURITY ERROR: Insecure default password 'demo123' cannot be used in production.")
+            logger.error("FATAL SECURITY ERROR: Insecure default password cannot be used in production.")
             sys.exit(1)
 
         if admin_email and admin_password:
@@ -74,14 +84,7 @@ def seed_db(app):
                         })
                         TrackingService.refresh_shipment(shipment.id)
         elif not is_prod:
-            # Fallback for local development ease if env vars not provided
-            if User.query.filter_by(email="demo@shiptrack.ai").first() is None:
-                default_user = User(
-                    email="demo@shiptrack.ai",
-                    password_hash=generate_password_hash("demo123")
-                )
-                db.session.add(default_user)
-                db.session.commit()
+            pass # Fallback local dev block removed to prevent source-controlled credentials
 
 if __name__ == '__main__':
     app = create_app()
