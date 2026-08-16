@@ -32,12 +32,27 @@ def refresh_shipment(id):
         if result.get('status') == 'error':
             error_msg = result.get('error_message', 'Unknown error')
             logger.info(f"Error message: {error_msg}")
-            # Check if it's a provider unavailable error
-            if 'NotImplementedError' in error_msg or 'authorized tracking integration' in error_msg:
+            error_msg_lower = error_msg.lower()
+            clean_msg = error_msg.replace("NotImplementedError: ", "").replace("ValueError: ", "")
+            
+            if 'invalid tracking number' in error_msg_lower or 'valueerror' in error_msg_lower:
+                logger.info("Returning INVALID_TRACKING_NUMBER")
+                return jsonify({'success': False, 'error': {'code': 'INVALID_TRACKING_NUMBER', 'message': clean_msg}}), 422
+            elif 'rate limit' in error_msg_lower or 'too many requests' in error_msg_lower or '429' in error_msg_lower:
+                logger.info("Returning PROVIDER_RATE_LIMITED")
+                return jsonify({'success': False, 'error': {'code': 'PROVIDER_RATE_LIMITED', 'message': clean_msg}}), 429
+            elif 'timeout' in error_msg_lower:
+                logger.info("Returning PROVIDER_TIMEOUT")
+                return jsonify({'success': False, 'error': {'code': 'PROVIDER_TIMEOUT', 'message': clean_msg}}), 503
+            elif any(term in error_msg_lower for term in ['network', 'connection refused', 'dns', 'unreachable', 'socket', 'connectionerror', 'requests.exceptions']):
+                logger.info("Returning PROVIDER_NETWORK_ERROR")
+                return jsonify({'success': False, 'error': {'code': 'PROVIDER_NETWORK_ERROR', 'message': clean_msg}}), 503
+            elif 'notimplementederror' in error_msg_lower or 'authorized tracking integration' in error_msg_lower or 'provider unavailable' in error_msg_lower:
                 logger.info("Returning PROVIDER_UNAVAILABLE")
-                return jsonify({'success': False, 'error': {'code': 'PROVIDER_UNAVAILABLE', 'message': 'Tracking provider is currently unavailable'}}), 503
-            logger.info("Returning TRACKING_ERROR")
-            return jsonify({'success': False, 'error': {'code': 'TRACKING_ERROR', 'message': 'Failed to refresh tracking'}}), 500
+                return jsonify({'success': False, 'error': {'code': 'PROVIDER_UNAVAILABLE', 'message': clean_msg}}), 503
+            else:
+                logger.info("Returning INTERNAL_ERROR for tracking failure")
+                return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Internal server error'}}), 500
         return jsonify({'success': True, 'data': result}), 200
     except Exception as e:
         _log_error(f'/shipments/{id}/refresh POST', e)
