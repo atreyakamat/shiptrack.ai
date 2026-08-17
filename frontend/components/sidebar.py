@@ -38,7 +38,12 @@ def render_sidebar():
                 st.session_state['current_page'] = item['id']
                 st.rerun()
 
-        st.markdown("<hr style='border-color: var(--border-color); margin: 2rem 0;'>", unsafe_allow_html=True)
+        if st.button("🚪 Log Out", key="nav_logout", use_container_width=True, type="secondary"):
+            if 'auth_token' in st.session_state:
+                del st.session_state['auth_token']
+            st.rerun()
+
+        st.markdown("<hr style='border-color: var(--border-color); margin: 1.5rem 0;'>", unsafe_allow_html=True)
         
         # Check health/demo status from session state (populated in main app)
         health_status = st.session_state.get('api_health', {})
