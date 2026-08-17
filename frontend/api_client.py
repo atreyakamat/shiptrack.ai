@@ -15,9 +15,9 @@ class ShipTrackAPI:
     def set_token(self, token):
         self.session.headers.update({'Authorization': f'Bearer {token}'})
         
-    def login(self, email):
+    def login(self, email, password):
         try:
-            res = self.session.post(f"{self.base_url}/auth/login", json={"email": email})
+            res = self.session.post(f"{self.base_url}/auth/login", json={"email": email, "password": password})
             data = self._handle_response(res)
             if data and 'token' in data:
                 self.set_token(data['token'])
@@ -27,9 +27,9 @@ class ShipTrackAPI:
             st.error(f"Login failed: {e}")
             return None
 
-    def register(self, email):
+    def register(self, email, password):
         try:
-            res = self.session.post(f"{self.base_url}/auth/register", json={"email": email})
+            res = self.session.post(f"{self.base_url}/auth/register", json={"email": email, "password": password})
             data = self._handle_response(res)
             if data and 'token' in data:
                 self.set_token(data['token'])
@@ -73,9 +73,11 @@ class ShipTrackAPI:
             elif code == 409:
                 st.error("This tracking number is already in your shipments.")
             elif code == 429:
-                st.error("Too many requests. Please wait a moment.")
+                st.error("The tracking provider is temporarily rate-limiting requests. Please try again later.")
             elif code == 503:
                 st.error("The tracking provider is currently unavailable.")
+            elif code >= 500:
+                st.error("ShipTrack AI encountered an unexpected internal error.")
             else:
                 st.error("An unexpected server error occurred.")
             return None
