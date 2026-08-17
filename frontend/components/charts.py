@@ -50,11 +50,20 @@ def status_distribution_chart(data):
     return fig
 
 def shipments_over_time_chart(data):
-    # Dummy implementation for area chart
+    """Create area chart from shipments over time data."""
+    if not data:
+        fig = go.Figure()
+        fig.add_annotation(text="No historical data available", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(**chart_layout_updates)
+        return fig
+    
+    periods = [d.get('period', '') for d in data]
+    counts = [d.get('count', 0) for d in data]
+    
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        y=[10, 15, 13, 17, 21, 19],
+        x=periods,
+        y=counts,
         fill='tozeroy',
         mode='lines+markers',
         line=dict(color='#38BDF8', width=3),
@@ -68,24 +77,98 @@ def shipments_over_time_chart(data):
     )
     return fig
 
-def delivery_time_chart(data):
+def delivery_time_distribution_chart(data):
+    """Create histogram from delivery time distribution data."""
+    if not data:
+        fig = go.Figure()
+        fig.add_annotation(text="No delivery data available", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(**chart_layout_updates)
+        return fig
+    
+    ranges = [d.get('range', '') for d in data]
+    counts = [d.get('count', 0) for d in data]
+    
     fig = go.Figure(go.Bar(
-        x=['Delhi', 'Mumbai', 'Bangalore', 'Chennai'],
-        y=[2.5, 3.1, 4.0, 3.5],
+        x=ranges,
+        y=counts,
         marker_color='#10B981'
     ))
     fig.update_layout(
-        title="Avg Delivery Time (Days)",
-        xaxis=dict(showgrid=False),
+        title="Delivery Time Distribution",
+        xaxis=dict(showgrid=False, tickangle=45),
         yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)'),
         **chart_layout_updates
     )
     return fig
 
-def location_frequency_chart(data):
+def delivery_time_by_carrier_chart(data):
+    """Create bar chart for average delivery time by carrier."""
+    if not data:
+        fig = go.Figure()
+        fig.add_annotation(text="No carrier delivery data available", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(**chart_layout_updates)
+        return fig
+    
+    carriers = [d.get('carrier', '') for d in data]
+    avg_days = [d.get('avg_days', 0) for d in data]
+    counts = [d.get('count', 0) for d in data]
+    
     fig = go.Figure(go.Bar(
-        x=[45, 30, 25, 15, 10],
-        y=['Mumbai Hub', 'Delhi Sorting', 'Bangalore GPO', 'Chennai Hub', 'Kolkata'],
+        x=carriers,
+        y=avg_days,
+        marker_color='#38BDF8',
+        text=[f"{d} days ({c} shipments)" for d, c in zip(avg_days, counts)],
+        textposition='auto'
+    ))
+    fig.update_layout(
+        title="Avg Delivery Time by Carrier",
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', title="Days"),
+        **chart_layout_updates
+    )
+    return fig
+
+def delivery_time_by_location_chart(data):
+    """Create horizontal bar chart for average delivery time by location."""
+    if not data:
+        fig = go.Figure()
+        fig.add_annotation(text="No location delivery data available", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(**chart_layout_updates)
+        return fig
+    
+    locations = [d.get('location', '') for d in data]
+    avg_days = [d.get('avg_days', 0) for d in data]
+    counts = [d.get('count', 0) for d in data]
+    
+    fig = go.Figure(go.Bar(
+        x=avg_days,
+        y=locations,
+        orientation='h',
+        marker_color='#F59E0B',
+        text=[f"{d} days ({c} shipments)" for d, c in zip(avg_days, counts)],
+        textposition='auto'
+    ))
+    fig.update_layout(
+        title="Avg Delivery Time by Location",
+        xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)', title="Days"),
+        yaxis=dict(showgrid=False, autorange="reversed"),
+        **chart_layout_updates
+    )
+    return fig
+
+def location_frequency_chart(data):
+    if not data:
+        fig = go.Figure()
+        fig.add_annotation(text="No location data available", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(**chart_layout_updates)
+        return fig
+    
+    locations = [d.get('location', '') for d in data]
+    counts = [d.get('count', 0) for d in data]
+    
+    fig = go.Figure(go.Bar(
+        x=counts,
+        y=locations,
         orientation='h',
         marker_color='#38BDF8'
     ))
@@ -93,6 +176,44 @@ def location_frequency_chart(data):
         title="Frequent Transit Locations",
         xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)'),
         yaxis=dict(showgrid=False, autorange="reversed"),
+        **chart_layout_updates
+    )
+    return fig
+
+def recent_activity_chart(data):
+    """Create a simple activity timeline from recent events."""
+    if not data:
+        fig = go.Figure()
+        fig.add_annotation(text="No recent activity", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(**chart_layout_updates)
+        return fig
+    
+    # Extract timestamps and statuses
+    times = []
+    statuses = []
+    for e in data:
+        ts = e.get('event_timestamp') or e.get('created_at')
+        if ts:
+            times.append(ts)
+            statuses.append(e.get('status', 'Update'))
+    
+    if not times:
+        fig = go.Figure()
+        fig.add_annotation(text="No timestamped activity", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+        fig.update_layout(**chart_layout_updates)
+        return fig
+    
+    fig = go.Figure(go.Scatter(
+        x=times,
+        y=statuses,
+        mode='markers+lines',
+        marker=dict(size=10, color='#38BDF8'),
+        line=dict(color='#38BDF8', width=2, dash='dot')
+    ))
+    fig.update_layout(
+        title="Recent Tracking Activity",
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)'),
         **chart_layout_updates
     )
     return fig
