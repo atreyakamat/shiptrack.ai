@@ -109,5 +109,91 @@ def test_refresh_shipment_error(auth_client, app, test_user):
         sid = s.id
         
     rv = auth_client.post(f'/api/shipments/{sid}/refresh')
+    assert rv.status_code == 503
+    assert rv.get_json()['success'] is False
+    assert rv.get_json()['error']['code'] == 'PROVIDER_TIMEOUT'
+
+def test_india_post_provider_unavailable_returns_503(auth_client, app, test_user, monkeypatch):
+    from backend.services.tracking_service import TrackingService
+    def mock_refresh(shipment_id):
+        return {'status': 'error', 'events_added': 0, 'error_message': 'Live India Post tracking requires an authorized tracking integration.'}
+    monkeypatch.setattr(TrackingService, 'refresh_shipment', mock_refresh)
+    
+    with app.app_context():
+        s = Shipment(user_id=test_user.id, tracking_number='EM100000009IN', description='India post')
+        db.session.add(s)
+        db.session.commit()
+        sid = s.id
+        
+    rv = auth_client.post(f'/api/shipments/{sid}/refresh')
+    assert rv.status_code == 503
+    assert rv.get_json()['success'] is False
+    assert rv.get_json()['error']['code'] == 'PROVIDER_UNAVAILABLE'
+
+def test_unexpected_tracking_error_returns_500(auth_client, app, test_user, monkeypatch):
+    from backend.services.tracking_service import TrackingService
+    def mock_refresh(shipment_id):
+        return {'status': 'error', 'events_added': 0, 'error_message': 'database failure during sync'}
+    monkeypatch.setattr(TrackingService, 'refresh_shipment', mock_refresh)
+    
+    with app.app_context():
+        s = Shipment(user_id=test_user.id, tracking_number='EM100000008IN', description='Random crash')
+        db.session.add(s)
+        db.session.commit()
+        sid = s.id
+        
+    rv = auth_client.post(f'/api/shipments/{sid}/refresh')
     assert rv.status_code == 500
-    assert 'error' in rv.get_json().get('status', '') or 'error' in rv.get_json()
+    assert rv.get_json()['success'] is False
+    assert rv.get_json()['error']['code'] == 'INTERNAL_ERROR'
+
+def test_rate_limit_error_returns_429(auth_client, app, test_user, monkeypatch):
+    from backend.services.tracking_service import TrackingService
+    def mock_refresh(shipment_id):
+        return {'status': 'error', 'events_added': 0, 'error_message': 'Provider returned 429 Too Many Requests'}
+    monkeypatch.setattr(TrackingService, 'refresh_shipment', mock_refresh)
+    
+    with app.app_context():
+        s = Shipment(user_id=test_user.id, tracking_number='EM100000008IN', description='Rate limited')
+        db.session.add(s)
+        db.session.commit()
+        sid = s.id
+        
+    rv = auth_client.post(f'/api/shipments/{sid}/refresh')
+    assert rv.status_code == 429
+    assert rv.get_json()['success'] is False
+    assert rv.get_json()['error']['code'] == 'PROVIDER_RATE_LIMITED'
+
+def test_network_timeout_error_returns_503(auth_client, app, test_user, monkeypatch):
+    from backend.services.tracking_service import TrackingService
+    def mock_refresh(shipment_id):
+        return {'status': 'error', 'events_added': 0, 'error_message': 'requests.exceptions.Timeout: Connection timed out'}
+    monkeypatch.setattr(TrackingService, 'refresh_shipment', mock_refresh)
+    
+    with app.app_context():
+        s = Shipment(user_id=test_user.id, tracking_number='EM100000008IN', description='Timeout')
+        db.session.add(s)
+        db.session.commit()
+        sid = s.id
+        
+    rv = auth_client.post(f'/api/shipments/{sid}/refresh')
+    assert rv.status_code == 503
+    assert rv.get_json()['success'] is False
+    assert rv.get_json()['error']['code'] == 'PROVIDER_TIMEOUT'
+
+def test_invalid_tracking_number_returns_422(auth_client, app, test_user, monkeypatch):
+    from backend.services.tracking_service import TrackingService
+    def mock_refresh(shipment_id):
+        return {'status': 'error', 'events_added': 0, 'error_message': 'ValueError: Invalid India Post tracking number'}
+    monkeypatch.setattr(TrackingService, 'refresh_shipment', mock_refresh)
+    
+    with app.app_context():
+        s = Shipment(user_id=test_user.id, tracking_number='EM100000008IN', description='Invalid')
+        db.session.add(s)
+        db.session.commit()
+        sid = s.id
+        
+    rv = auth_client.post(f'/api/shipments/{sid}/refresh')
+    assert rv.status_code == 422
+    assert rv.get_json()['success'] is False
+    assert rv.get_json()['error']['code'] == 'INVALID_TRACKING_NUMBER'

@@ -69,3 +69,39 @@ def test_timeline_html_rendering(mock_markdown):
     assert "11 Aug 2026" in html_output
     assert "09:07 AM" in html_output
 
+def test_api_client_login_payload():
+    from frontend.api_client import ShipTrackAPI
+    api = ShipTrackAPI(base_url="http://mock-api")
+    
+    with patch.object(api.session, 'post') as mock_post:
+        mock_post.return_value.status_code = 200
+        mock_post.return_value.json.return_value = {
+            'success': True,
+            'data': {'token': 'mock_jwt_token'}
+        }
+        
+        token = api.login("user@shiptrack.ai", "secretpass123")
+        assert token == 'mock_jwt_token'
+        mock_post.assert_called_once_with(
+            "http://mock-api/auth/login",
+            json={"email": "user@shiptrack.ai", "password": "secretpass123"}
+        )
+
+def test_api_client_register_payload():
+    from frontend.api_client import ShipTrackAPI
+    api = ShipTrackAPI(base_url="http://mock-api")
+    
+    with patch.object(api.session, 'post') as mock_post:
+        mock_post.return_value.status_code = 201
+        mock_post.return_value.json.return_value = {
+            'success': True,
+            'data': {'token': 'new_jwt_token'}
+        }
+        
+        token = api.register("newuser@shiptrack.ai", "password123")
+        assert token == 'new_jwt_token'
+        mock_post.assert_called_once_with(
+            "http://mock-api/auth/register",
+            json={"email": "newuser@shiptrack.ai", "password": "password123"}
+        )
+
