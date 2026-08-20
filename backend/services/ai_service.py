@@ -103,7 +103,61 @@ class AIService:
 
     @staticmethod
     def generate_insights(shipments: List[Shipment]) -> Dict[str, Any]:
+        if not shipments:
+            return {
+                "summary": "No active shipments found in your library. Add a shipment to generate AI transit intelligence.",
+                "total_count": 0,
+                "delayed_count": 0,
+                "watch_count": 0,
+                "normal_count": 0,
+                "delayed_shipments": [],
+                "recommendations": ["Add tracking numbers to monitor postal deliveries."]
+            }
+            
+        total = len(shipments)
+        delayed_shipments = []
+        watch_count = 0
+        normal_count = 0
+        delivered_count = 0
+        
+        for s in shipments:
+            health = AIService.classify_health(s)
+            if health == 'DELAYED' or s.status in ['DELAYED', 'EXCEPTION']:
+                delayed_shipments.append({
+                    'id': s.id,
+                    'tracking_number': s.tracking_number,
+                    'status': s.status,
+                    'current_location': s.current_location or 'Unknown Location'
+                })
+            elif health == 'WATCH':
+                watch_count += 1
+            elif s.status == 'DELIVERED':
+                delivered_count += 1
+            else:
+                normal_count += 1
+                
+        delayed_count = len(delayed_shipments)
+        
+        if delayed_count > 0:
+            summary = f"Identified {delayed_count} shipment(s) requiring attention due to delayed scan updates or carrier exceptions."
+            recommendations = [f"Check latest facility updates for {delayed_shipments[0]['tracking_number']}."]
+        elif watch_count > 0:
+            summary = f"All shipments are moving. {watch_count} shipment(s) have had no new scan in the past 24-48 hours."
+            recommendations = ["Monitor active shipments for expected sorting hub arrivals."]
+        elif delivered_count == total:
+            summary = f"All {total} tracked shipments have been successfully delivered."
+            recommendations = ["Archive delivered shipments to keep your active list organized."]
+        else:
+            summary = f"Analyzed {total} shipment(s). All active parcels are progressing normally through postal hubs."
+            recommendations = ["Regularly refresh active tracking numbers to stay updated on facility scans."]
+            
         return {
-            "insight": f"Analyzed {len(shipments)} shipments. System is operating normally.",
-            "recommendations": ["Monitor delayed shipments."]
+            "summary": summary,
+            "total_count": total,
+            "delivered_count": delivered_count,
+            "delayed_count": delayed_count,
+            "watch_count": watch_count,
+            "normal_count": normal_count,
+            "delayed_shipments": delayed_shipments,
+            "recommendations": recommendations
         }

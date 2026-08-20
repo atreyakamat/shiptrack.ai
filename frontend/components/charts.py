@@ -28,7 +28,7 @@ def status_distribution_chart(data):
     normalized_counts = {}
     for s in data:
         status = s.get('status', 'Unknown').replace('_', ' ').title()
-        normalized_counts[status] = normalized_counts.get(status, 0) + 1
+        normalized_counts[status] = normalized_counts.get(status, 0) + s.get('count', 1)
         
     labels = list(normalized_counts.keys())
     values = list(normalized_counts.values())

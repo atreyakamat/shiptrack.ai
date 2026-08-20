@@ -246,11 +246,16 @@ class AnalyticsService:
     def get_recent_activity(user_id: int, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent tracking activity across all shipments."""
         try:
-            events = db.session.query(TrackingEvent).join(Shipment).filter(
+            results = db.session.query(TrackingEvent, Shipment.tracking_number).join(Shipment).filter(
                 Shipment.user_id == user_id
             ).order_by(TrackingEvent.created_at.desc()).limit(limit).all()
             
-            return [e.to_dict() for e in events]
+            activity = []
+            for event, tracking_number in results:
+                d = event.to_dict()
+                d['tracking_number'] = tracking_number
+                activity.append(d)
+            return activity
         except Exception as e:
             logger.error(f"Error getting recent activity: {e}")
             return []

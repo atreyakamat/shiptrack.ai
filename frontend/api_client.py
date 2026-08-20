@@ -255,6 +255,31 @@ class ShipTrackAPI:
             st.error(f"Failed to mark notification as read: {e}")
             return None
 
+    def mark_all_notifications_read(self) -> dict:
+        try:
+            res = self.session.post(f"{self.base_url}/notifications/read-all")
+            return self._handle_response(res)
+        except requests.exceptions.RequestException as e:
+            st.error(f"Failed to mark all notifications as read: {e}")
+            return None
+
+    def get_notification_preferences(self) -> list:
+        try:
+            res = self.session.get(f"{self.base_url}/notifications/preferences")
+            data = self._handle_response(res)
+            return data if data else []
+        except requests.exceptions.RequestException as e:
+            st.error(f"Failed to load notification preferences: {e}")
+            return []
+
+    def update_notification_preference(self, event_type: str, data: dict) -> dict:
+        try:
+            res = self.session.put(f"{self.base_url}/notifications/preferences/{event_type}", json=data)
+            return self._handle_response(res)
+        except requests.exceptions.RequestException as e:
+            st.error(f"Failed to update preference: {e}")
+            return None
+
     def export_csv(self) -> bytes:
         try:
             res = self.session.get(f"{self.base_url}/analytics/export")

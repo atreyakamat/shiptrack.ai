@@ -56,6 +56,7 @@ def process_ocr():
                 logger.error(f"Failed to cleanup OCR file {file_path}: {e}")
             
             data = doc.to_dict()
+            data['candidates'] = result.get('candidates', [])
             # Inject demo flag from service if present
             if result.get('is_demo'):
                 data['is_demo'] = True

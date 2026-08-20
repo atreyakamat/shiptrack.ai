@@ -8,6 +8,8 @@ from backend.models.refresh_log import RefreshLog
 from backend.models.postal_office import PostalOffice
 from backend.carriers.mock import MockCarrierAdapter
 from backend.carriers.india_post import IndiaPostAdapter
+from backend.carriers.authorized_tracking import AuthorizedTrackingAdapter
+from backend.carriers.india_post_web import IndiaPostWebAdapter
 from .notification_service import NotificationService
 import os
 import dateutil.parser
@@ -21,14 +23,18 @@ class TrackingService:
         carrier = normalize_carrier(carrier)
         try:
             from flask import current_app
-            provider = current_app.config.get('TRACKING_PROVIDER', 'mock')
+            provider = current_app.config.get('TRACKING_PROVIDER', 'mock').lower()
             demo_mode = current_app.config.get('TRACKING_DEMO_MODE', True)
         except RuntimeError:
-            provider = os.getenv('TRACKING_PROVIDER', 'mock')
+            provider = os.getenv('TRACKING_PROVIDER', 'mock').lower()
             demo_mode = os.getenv('TRACKING_DEMO_MODE', 'true').lower() == 'true'
             
         if demo_mode or provider == 'mock' or carrier == 'mock':
             return MockCarrierAdapter()
+        if provider in ['web', 'india_post_web', 'human_assisted']:
+            return IndiaPostWebAdapter()
+        if provider in ['authorized', 'trackingmore', 'ship24', 'indiapost_direct']:
+            return AuthorizedTrackingAdapter(provider_name=provider)
         if carrier == 'india_post':
             return IndiaPostAdapter()
         return MockCarrierAdapter()

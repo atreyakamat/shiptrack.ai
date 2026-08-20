@@ -34,3 +34,14 @@ def test_extract_tracking_number_invalid():
     text = "RECEIPT\nTRACKING ID: 123456\nDATE: 01/01/2026"
     res = OCRService.extract_tracking_number(text)
     assert res[0] is None
+
+def test_extract_candidates_multiple():
+    text = "FIRST: EM123456789IN, SECOND: EE987654321IN, LOOSE: SS12345678SIN"
+    candidates = OCRService.extract_candidates(text)
+    assert len(candidates) == 3
+    assert candidates[0]['tracking_number'] == "EM123456789IN"
+    assert candidates[0]['confidence'] == 0.95
+    assert candidates[1]['tracking_number'] == "EE987654321IN"
+    assert candidates[1]['confidence'] == 0.95
+    assert candidates[2]['tracking_number'] == "SS123456785IN"
+    assert candidates[2]['confidence'] == 0.60

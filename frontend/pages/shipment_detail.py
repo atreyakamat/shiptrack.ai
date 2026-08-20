@@ -109,6 +109,25 @@ def show(api):
     last_updated = _clean_display(s.get('last_updated'), 'Time unavailable')
     last_updated = _format_last_updated(last_updated)
 
+    # Calculate transit days
+    booked_at_raw = s.get('booked_at')
+    transit_days_str = "Not available"
+    if booked_at_raw:
+        try:
+            from datetime import datetime, timezone
+            booked_dt = datetime.fromisoformat(booked_at_raw.replace('Z', '+00:00'))
+            if s.get('status') == 'DELIVERED' and s.get('last_updated'):
+                end_dt = datetime.fromisoformat(s.get('last_updated').replace('Z', '+00:00'))
+            else:
+                end_dt = datetime.now(timezone.utc)
+            delta = end_dt - booked_dt
+            days = delta.days
+            if days < 0:
+                days = 0
+            transit_days_str = f"{days} days" if days != 1 else "1 day"
+        except Exception:
+            pass
+
     header_html = f"""
     <div>
         <h1 style="margin:0; font-size:2.5rem;">{tracking_no}</h1>
@@ -117,6 +136,7 @@ def show(api):
         <br>
         <p style="margin:0;">Destination: <strong>{dest}</strong></p>
         <p style="margin:0;">Expected Delivery: <strong>{exp_delivery}</strong></p>
+        <p style="margin:0;">Days in Transit: <strong>{transit_days_str}</strong></p>
         <p style="margin:0;">Priority: <strong>{priority}</strong></p>
         <br>
         <p style="margin:0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase;">Current Location:</p>

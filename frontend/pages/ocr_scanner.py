@@ -30,39 +30,56 @@ def show(api):
                 if is_demo:
                     st.warning("⚠️ **DEMO OCR MODE** - The OCR engine (EasyOCR) is not installed. This is a simulated fallback result and NOT a real extraction from your image.")
                     st.info("To enable Real OCR, install the easyocr python package.")
-                tracking_num = res.get('extracted_tracking_number', res.get('tracking_number', 'Not Found'))
                 
-                if not tracking_num or tracking_num == 'Not Found':
+                candidates = res.get('candidates', [])
+                selected_tracking = None
+                
+                if candidates:
+                    st.markdown("### Candidates Found")
+                    options = []
+                    for c in candidates:
+                        num = c.get('tracking_number')
+                        conf = c.get('confidence')
+                        if conf is not None:
+                            options.append(f"{num} ({conf*100:.0f}% confidence)")
+                        else:
+                            options.append(num)
+                    
+                    options.append("Enter manually...")
+                    selection = st.selectbox("Select Extracted Tracking Number", options)
+                    
+                    if selection == "Enter manually...":
+                        selected_tracking = st.text_input("Enter Tracking Number", value="")
+                    else:
+                        selected_tracking = selection.split(" ")[0]
+                else:
                     st.warning("Could not automatically extract a valid India Post tracking number from this receipt.")
                     st.info("Ensure the image is clear, well-lit, and the tracking number (e.g. EM123456789IN) is visible.")
-                else:
-                    confidence = res.get('confidence')
-                    if confidence is not None:
-                        if confidence < 0.7:
-                            st.warning("⚠️ Low confidence extraction. Please verify the tracking number below.")
-                        else:
-                            st.success("High confidence extraction.")
-                        st.progress(float(confidence))
-                        st.caption(f"Real Extraction Confidence: {confidence*100:.1f}%")
-                    else:
-                        st.caption("No confidence score available in Demo Mode.")
+                    selected_tracking = st.text_input("Enter Tracking Number Manually", value="")
                         
                 with st.expander("Show Full Extracted Text"):
                     st.text(res.get('ocr_text', res.get('full_text', 'No text extracted.')))
                     
-                if tracking_num and tracking_num != 'Not Found':
-                    # Allow user to edit the extracted tracking number
-                    final_tracking = st.text_input("Verify Tracking Number", value=tracking_num)
-                    
+                if selected_tracking:
                     if st.button("Confirm & Add Shipment", type="primary"):
-                        s_data = {
-                            "tracking_number": final_tracking,
-                            "carrier": res.get('carrier_guess', 'India Post'),
-                            "description": "Scanned from receipt"
-                        }
-                        c_res = api.create_shipment(s_data)
+                        doc_id = res.get('id')
+                        if doc_id:
+                            c_res = api.confirm_ocr({
+                                "document_id": doc_id,
+                                "tracking_number": selected_tracking,
+                                "carrier": "india_post"
+                            })
+                        else:
+                            s_data = {
+                                "tracking_number": selected_tracking,
+                                "carrier": "india_post",
+                                "description": "Scanned from receipt"
+                            }
+                            c_res = api.create_shipment(s_data)
+                            
                         if c_res:
-                            del st.session_state['ocr_result']
-                            st.session_state['current_shipment_id'] = c_res.get('id', tracking_num)
+                            if 'ocr_result' in st.session_state:
+                                del st.session_state['ocr_result']
+                            st.session_state['current_shipment_id'] = c_res.get('id')
                             st.session_state['current_page'] = 'shipment_detail'
                             st.rerun()
