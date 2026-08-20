@@ -26,13 +26,13 @@ def render_progress_bar(status):
         c_class = "completed" if is_completed else "active" if is_active else ""
         l_class = "active" if (is_active or is_completed) else ""
 
-        step_html = f"""
-        <div class="progress-step">
-            <div class="step-icon {c_class}">{stage_icon}</div>
-            <div class="step-label {l_class}">{stage_label}</div>
-        </div>
-        """
-        html_parts.append(textwrap.dedent(step_html).strip())
+        step_html = (
+            f'<div class="progress-step">'
+            f'<div class="step-icon {c_class}">{stage_icon}</div>'
+            f'<div class="step-label {l_class}">{stage_label}</div>'
+            f'</div>'
+        )
+        html_parts.append(step_html)
 
     html_parts.append('</div></div>')
 

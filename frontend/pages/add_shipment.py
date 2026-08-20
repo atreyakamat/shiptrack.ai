@@ -1,9 +1,6 @@
 import streamlit as st
 
-def show(api):
-    st.markdown("<h2>Add New Shipment</h2>", unsafe_allow_html=True)
-    
-    CARRIER_LABEL_TO_CODE = {
+CARRIER_LABEL_TO_CODE = {
     "India Post": "india_post",
     "Delhivery": "delhivery",
     "BlueDart": "bluedart",
