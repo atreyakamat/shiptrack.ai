@@ -11,7 +11,7 @@ class InAppNotificationProvider(BaseNotificationProvider):
     def send(self, event_type: str, shipment_id: int, message: str, context: Dict[str, Any] = None) -> bool:
         try:
             from backend.models.shipment import Shipment
-            shipment = Shipment.query.get(shipment_id)
+            shipment = db.session.get(Shipment, shipment_id)
             if not shipment:
                 return False
                 

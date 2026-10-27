@@ -3,6 +3,15 @@ import os
 
 ALLOWED_FILE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'pdf'}
 
+EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+MIN_PASSWORD_LENGTH = 8
+
+def validate_email(email: str) -> bool:
+    return bool(email and EMAIL_RE.match(email.strip()) and len(email) <= 254)
+
+def validate_password(password: str) -> bool:
+    return bool(password and len(password) >= MIN_PASSWORD_LENGTH)
+
 def validate_tracking_number(number: str, carrier: str = 'india_post') -> bool:
     if not number:
         return False

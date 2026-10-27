@@ -1,11 +1,10 @@
-from flask import Blueprint, jsonify, g, send_file, request
+from flask import Blueprint, jsonify, g, request, Response
 from backend.services.analytics_service import AnalyticsService
 from backend.services.shipment_service import ShipmentService
 from backend.utils.auth import token_required
 import logging
 import csv
-import os
-from tempfile import NamedTemporaryFile
+import io
 
 logger = logging.getLogger(__name__)
 analytics_bp = Blueprint('analytics', __name__)
@@ -110,18 +109,20 @@ def get_recent_activity():
 def export_csv():
     try:
         shipments = ShipmentService.get_all_shipments(g.current_user.id, {})
-        temp = NamedTemporaryFile(mode='w', delete=False, suffix='.csv', newline='')
-        writer = csv.writer(temp)
+        # Build the CSV in memory and stream it — no temp files left on disk.
+        output = io.StringIO()
+        writer = csv.writer(output)
         writer.writerow(['Tracking Number', 'Carrier', 'Status', 'Origin', 'Destination', 'Category', 'Created At', 'Last Updated'])
-        
         for s in shipments:
             writer.writerow([
-                s.tracking_number, s.carrier, s.status, s.origin, s.destination, 
+                s.tracking_number, s.carrier, s.status, s.origin, s.destination,
                 s.category, s.created_at, s.last_updated
             ])
-            
-        temp.close()
-        return send_file(temp.name, as_attachment=True, download_name='shiptrack_export.csv', mimetype='text/csv')
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': 'attachment; filename=shiptrack_export.csv'},
+        )
     except Exception as e:
         logger.error(f"Error exporting CSV: {e}")
         return jsonify({'success': False, 'error': {'code': 'ANALYTICS_ERROR', 'message': 'Failed to export CSV'}}), 500

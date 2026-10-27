@@ -92,7 +92,7 @@ class TrackingService:
     @staticmethod
     def refresh_shipment(shipment_id: int) -> Dict[str, Any]:
         # We need the shipment to know the user_id for the log
-        shipment = db.session.query(Shipment).get(shipment_id)
+        shipment = db.session.get(Shipment, shipment_id)
         if not shipment:
             return {'status': 'error', 'error_message': 'Shipment not found'}
             
@@ -102,7 +102,7 @@ class TrackingService:
         
         try:
             # Row-level locking to prevent concurrent tracking refreshes on the same shipment
-            shipment = db.session.query(Shipment).with_for_update().get(shipment_id)
+            shipment = db.session.get(Shipment, shipment_id, with_for_update=True)
             if not shipment:
                 raise Exception("Shipment not found")
                 
@@ -179,7 +179,7 @@ class TrackingService:
             
             # Record failed sync metadata safely
             try:
-                shipment_err = db.session.query(Shipment).get(shipment_id)
+                shipment_err = db.session.get(Shipment, shipment_id)
                 if shipment_err:
                     shipment_err.last_failed_sync = datetime.now(timezone.utc)
                     shipment_err.last_error = str(e)
@@ -209,7 +209,7 @@ class TrackingService:
         Shared by the automatic refresh and the in-app CAPTCHA relay so both store
         events and update status/location identically.
         """
-        shipment = db.session.query(Shipment).get(shipment_id)
+        shipment = db.session.get(Shipment, shipment_id)
         if not shipment:
             return {'status': 'error', 'error_message': 'Shipment not found'}
 

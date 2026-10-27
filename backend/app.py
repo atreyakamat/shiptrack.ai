@@ -13,7 +13,19 @@ def create_app(config_name='default'):
     
     # Configuration
     app.config.from_object(config_map[config_name])
-    
+
+    # Refuse to boot in production with an insecure/default secret key.
+    _INSECURE_SECRETS = {
+        '', 'dev-secret-key-change-in-production', 'change-me-in-production',
+        'generate-a-secure-secret-key-here',
+    }
+    is_production = config_name == 'production' or app.config.get('FLASK_ENV') == 'production'
+    if is_production and app.config.get('SECRET_KEY', '') in _INSECURE_SECRETS:
+        raise RuntimeError(
+            "SECRET_KEY must be set to a secure value in production "
+            "(set the SECRET_KEY environment variable)."
+        )
+
     # Configure logging
     log_level = getattr(logging, app.config.get('LOG_LEVEL', 'INFO').upper(), logging.INFO)
     logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -42,10 +54,12 @@ def create_app(config_name='default'):
     # Register blueprints
     register_routes(app)
     
-    # Create tables
-    with app.app_context():
-        db.create_all()
-        
+    # Create tables. When USE_MIGRATIONS=1, the schema is owned by Alembic migrations
+    # (`flask db upgrade`) instead, so skip the convenience auto-create.
+    if os.getenv('USE_MIGRATIONS') != '1':
+        with app.app_context():
+            db.create_all()
+
     return app
 
 def seed_db(app):

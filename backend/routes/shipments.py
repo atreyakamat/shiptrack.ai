@@ -102,14 +102,17 @@ def get_shipment(id):
 @token_required
 def update_shipment(id):
     try:
-        data = request.json
+        data = request.get_json(silent=True) or {}
         shipment = ShipmentService.update_shipment(g.current_user.id, id, data)
         if not shipment:
             return jsonify({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Shipment not found'}}), 404
         return jsonify({'success': True, 'data': shipment.to_dict()}), 200
+    except ValueError as ve:
+        # Validation errors are safe to surface; anything else is internal.
+        return jsonify({'success': False, 'error': {'code': 'VALIDATION_ERROR', 'message': str(ve)}}), 422
     except Exception as e:
         _log_error(f'/shipments/{id} PUT', e)
-        return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': str(e)}}), 400
+        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Internal server error'}}), 500
 
 @shipments_bp.route('/shipments/<int:id>', methods=['DELETE'])
 @token_required

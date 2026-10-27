@@ -20,19 +20,18 @@ def _log_error(endpoint: str, error: Exception):
 @limiter.limit("3 per minute")
 def register():
     try:
-        data = request.json
-        email = data.get('email')
-        
-        if not email:
-            return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'Email is required'}}), 400
-            
+        data = request.get_json(silent=True) or {}
+        email = (data.get('email') or '').strip()
+        password = data.get('password') or ''
+
+        from backend.utils.validators import validate_email, validate_password, MIN_PASSWORD_LENGTH
+        if not validate_email(email):
+            return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'A valid email is required'}}), 400
+        if not validate_password(password):
+            return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': f'Password must be at least {MIN_PASSWORD_LENGTH} characters'}}), 400
         if User.query.filter_by(email=email).first():
             return jsonify({'success': False, 'error': {'code': 'CONFLICT', 'message': 'Email already exists'}}), 409
-            
-        password = data.get('password')
-        if not password:
-            return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'Password is required'}}), 400
-            
+
         user = User(email=email)
         user.set_password(password)
         db.session.add(user)
@@ -60,16 +59,15 @@ def register():
 @limiter.limit("5 per minute")
 def login():
     try:
-        data = request.json
-        email = data.get('email')
-        
+        data = request.get_json(silent=True) or {}
+        email = (data.get('email') or '').strip()
+        password = data.get('password') or ''
+
         if not email:
             return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'Email is required'}}), 400
-            
-        password = data.get('password')
         if not password:
             return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'Password is required'}}), 400
-            
+
         user = User.query.filter_by(email=email).first()
         if not user or not user.check_password(password):
             return jsonify({'success': False, 'error': {'code': 'UNAUTHORIZED', 'message': 'Invalid credentials'}}), 401

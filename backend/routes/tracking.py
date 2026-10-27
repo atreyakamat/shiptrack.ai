@@ -1,9 +1,10 @@
-from flask import Blueprint, jsonify, g, request
+from flask import Blueprint, jsonify, g, request, current_app
 from backend.services.tracking_service import TrackingService
 from backend.services.shipment_service import ShipmentService
 from backend.utils.auth import token_required
 from backend.extensions import limiter
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 tracking_bp = Blueprint('tracking', __name__)
@@ -72,6 +73,25 @@ def refresh_all():
     except Exception as e:
         _log_error('/shipments/refresh-all POST', e)
         return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Internal server error'}}), 500
+
+@tracking_bp.route('/tracking/ship24/usage', methods=['GET'])
+@token_required
+def ship24_usage():
+    """Ship24 tracker usage vs the configured monthly limit, for the UI quota meter."""
+    provider = (current_app.config.get('TRACKING_PROVIDER') or os.getenv('TRACKING_PROVIDER', 'mock')).lower()
+    if provider != 'ship24':
+        return jsonify({'success': True, 'data': {'enabled': False}}), 200
+    try:
+        from backend.carriers.ship24 import Ship24Adapter
+        used = Ship24Adapter().active_tracker_count()
+        limit = int(os.getenv('SHIP24_ACTIVE_LIMIT', '10'))
+        return jsonify({'success': True, 'data': {
+            'enabled': True, 'used': used, 'limit': limit, 'remaining': max(0, limit - used),
+        }}), 200
+    except Exception as e:
+        logger.warning(f"Ship24 usage check failed: {e}")
+        return jsonify({'success': True, 'data': {'enabled': True, 'unavailable': True}}), 200
+
 
 @tracking_bp.route('/tracking/captcha/start', methods=['POST'])
 @token_required

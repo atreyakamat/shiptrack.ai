@@ -1,7 +1,8 @@
 from functools import wraps
 from flask import request, jsonify, current_app, g
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from backend.extensions import db
 from backend.models.user import User
 
 def token_required(f):
@@ -19,7 +20,7 @@ def token_required(f):
             
         try:
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
-            current_user = User.query.get(data['user_id'])
+            current_user = db.session.get(User, data['user_id'])
             if not current_user:
                 raise Exception("User not found")
             g.current_user = current_user
@@ -34,5 +35,5 @@ def token_required(f):
 def generate_token(user_id):
     return jwt.encode({
         'user_id': user_id,
-        'exp': datetime.utcnow() + timedelta(days=7)
+        'exp': datetime.now(timezone.utc) + timedelta(days=7)
     }, current_app.config['SECRET_KEY'], algorithm="HS256")

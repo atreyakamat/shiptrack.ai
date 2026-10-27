@@ -8,6 +8,7 @@ to the in-app CAPTCHA relay.
 """
 import logging
 import os
+import time
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -102,13 +103,26 @@ class Ship24Adapter(BaseCarrierAdapter):
 
     def track(self, tracking_number: str) -> Dict[str, Any]:
         tracking_number = tracking_number.strip().upper()
-        try:
-            res = requests.post(f"{BASE_URL}/trackers/track", headers=self._headers(),
-                                json={"trackingNumber": tracking_number}, timeout=self.timeout)
-        except requests.Timeout:
-            raise TimeoutError("Ship24 timed out. Please try again.")
-        except requests.RequestException as e:
-            raise ConnectionError(f"Could not reach Ship24: {e}")
+        res = None
+        last_err = None
+        # Retry transient failures (timeouts, connection errors, 5xx) a couple of times.
+        for attempt in range(3):
+            try:
+                res = requests.post(f"{BASE_URL}/trackers/track", headers=self._headers(),
+                                    json={"trackingNumber": tracking_number}, timeout=self.timeout)
+                if res.status_code < 500:
+                    break
+                last_err = f"HTTP {res.status_code}"
+            except requests.Timeout:
+                last_err = "timeout"
+            except requests.RequestException as e:
+                last_err = str(e)
+            if attempt < 2:
+                time.sleep(0.5 * (attempt + 1))
+        if res is None:
+            if last_err == "timeout":
+                raise TimeoutError("Ship24 timed out. Please try again.")
+            raise ConnectionError(f"Could not reach Ship24: {last_err}")
 
         if res.status_code in (401, 403):
             raise PermissionError("Ship24 authentication failed. Check TRACKING_API_KEY.")
