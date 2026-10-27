@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
-import { Empty, ErrorBox, Loading, PageHeader } from "@/components/ui";
+import { Empty, ErrorBox, PageHeader, SkeletonRows } from "@/components/ui";
 import { StatusBadge, statusLabel } from "@/components/StatusBadge";
 import { useApi } from "@/lib/useApi";
 import { formatDate } from "@/lib/format";
@@ -45,8 +45,13 @@ export default function Shipments() {
         </button>
       </div>
       {error && <ErrorBox message={error} />}
-      {loading && !data && <Loading />}
-      {data && rows.length === 0 && <Empty title="No shipments found" body="Try a different search or add a new shipment." />}
+      {loading && !data && <SkeletonRows />}
+      {data && rows.length === 0 && (
+        showDone
+          ? <Empty title="Nothing done yet" body="Shipments you mark as done will appear here." />
+          : <Empty title="No shipments found" body="Add a tracking number to get started."
+              action={<Link href="/shipments/new" className="btn-primary">Add shipment</Link>} />
+      )}
       {rows.length > 0 && (
         <div className="card overflow-x-auto">
           <table className="w-full text-left text-sm">

@@ -2,14 +2,16 @@
 import Link from "next/link";
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { Empty, ErrorBox, Loading, PageHeader, Stat } from "@/components/ui";
+import { Empty, ErrorBox, PageHeader, SkeletonStats, Stat } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useToast } from "@/components/Toast";
 import { post } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { formatDate } from "@/lib/format";
 import type { Analytics, Insights, Shipment } from "@/lib/types";
 
 export default function Dashboard() {
+  const toast = useToast();
   const stats = useApi<Analytics>("/analytics");
   const ships = useApi<Shipment[]>("/shipments");
   const insights = useApi<Insights>("/ai/insights");
@@ -22,8 +24,11 @@ export default function Dashboard() {
     try {
       await post("/shipments/refresh-all");
       await Promise.all([stats.reload(), ships.reload(), insights.reload()]);
+      toast("Refresh started", "success");
     } catch (e) {
-      setRefreshError(e instanceof Error ? e.message : "Refresh failed");
+      const msg = e instanceof Error ? e.message : "Refresh failed";
+      setRefreshError(msg);
+      toast(msg, "error");
     } finally {
       setRefreshing(false);
     }
@@ -39,7 +44,7 @@ export default function Dashboard() {
         actions={<button className="btn-ghost" onClick={refreshAll} disabled={refreshing}><RefreshCw size={16} className={refreshing ? "animate-spin" : ""} aria-hidden /> Refresh all</button>} />
       {error && <ErrorBox message={error} />}
       {refreshError && <ErrorBox message={refreshError} />}
-      {(stats.loading || ships.loading) && !o && <Loading />}
+      {(stats.loading || ships.loading) && !o && <SkeletonStats />}
       {o && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Stat label="Total" value={o.total} />

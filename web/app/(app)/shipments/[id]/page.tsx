@@ -2,11 +2,13 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Archive, ArrowLeft, Check, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import { ErrorBox, Loading } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Timeline } from "@/components/Timeline";
 import { CaptchaModal } from "@/components/CaptchaModal";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 import { ApiError, api, post } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useHealth } from "@/lib/useHealth";
@@ -16,12 +18,14 @@ import type { AiSummary, Shipment } from "@/lib/types";
 export default function ShipmentDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const toast = useToast();
   const { data: s, error, loading, reload } = useApi<Shipment>(`/shipments/${id}`);
   const health = useHealth();
   const [ai, setAi] = useState<AiSummary | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [captcha, setCaptcha] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     api<AiSummary>(`/ai/${id}/summary`).then(setAi).catch(() => setAi(null));
@@ -30,7 +34,11 @@ export default function ShipmentDetail({ params }: { params: Promise<{ id: strin
   async function run(name: string, fn: () => Promise<unknown>) {
     setBusy(name);
     setActionError(null);
-    try { await fn(); } catch (e) { setActionError(e instanceof Error ? e.message : "Action failed"); }
+    try { await fn(); } catch (e) {
+      const msg = e instanceof Error ? e.message : "Action failed";
+      setActionError(msg);
+      toast(msg, "error");
+    }
     finally { setBusy(null); }
   }
 
@@ -39,20 +47,16 @@ export default function ShipmentDetail({ params }: { params: Promise<{ id: strin
   const refresh = () => {
     if (health?.live_mode === "web") { setCaptcha(true); return; }
     run("refresh", async () => {
-      try { await post(`/shipments/${id}/refresh`); await reload(); }
+      try { await post(`/shipments/${id}/refresh`); await reload(); toast("Tracking refreshed", "success"); }
       catch (e) {
         if (e instanceof ApiError && e.code === "PROVIDER_QUOTA") { setCaptcha(true); return; }
         throw e;
       }
     });
   };
-  const generate = () => run("ai", async () => setAi(await post<AiSummary>(`/ai/${id}/generate`)));
-  const markDone = () => run("done", async () => { await post(`/shipments/${id}/done`); router.push("/shipments"); });
-  const archive = () => run("archive", async () => { await post(`/shipments/${id}/archive`); router.push("/shipments"); });
-  const remove = () => {
-    if (!confirm("Delete this shipment permanently?")) return;
-    run("delete", async () => { await api(`/shipments/${id}`, { method: "DELETE" }); router.push("/shipments"); });
-  };
+  const generate = () => run("ai", async () => { setAi(await post<AiSummary>(`/ai/${id}/generate`)); toast("Summary updated", "success"); });
+  const markDone = () => run("done", async () => { await post(`/shipments/${id}/done`); toast("Saved and marked done", "success"); router.push("/shipments"); });
+  const doDelete = () => run("delete", async () => { await api(`/shipments/${id}`, { method: "DELETE" }); toast("Shipment deleted", "success"); router.push("/shipments"); });
 
   if (loading && !s) return <Loading />;
   if (error || !s) return <ErrorBox message={error ?? "Shipment not found"} />;
@@ -70,8 +74,12 @@ export default function ShipmentDetail({ params }: { params: Promise<{ id: strin
           trackingNumber={s.tracking_number}
           shipmentId={Number(id)}
           onClose={() => setCaptcha(false)}
-          onSolved={async () => { setCaptcha(false); await reload(); }}
+          onSolved={async () => { setCaptcha(false); await reload(); toast("Tracking updated", "success"); }}
         />
+      )}
+      {confirmDelete && (
+        <ConfirmDialog title="Delete shipment?" body="This permanently removes the shipment and its history. This can't be undone."
+          confirmLabel="Delete" danger busy={busy === "delete"} onConfirm={doDelete} onCancel={() => setConfirmDelete(false)} />
       )}
       <Link href="/shipments" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-white"><ArrowLeft size={16} aria-hidden /> Shipments</Link>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -83,12 +91,17 @@ export default function ShipmentDetail({ params }: { params: Promise<{ id: strin
           <StatusBadge status={s.status} />
           <button className="btn-ghost" onClick={refresh} disabled={!!busy}><RefreshCw size={16} className={busy === "refresh" ? "animate-spin" : ""} aria-hidden /> Refresh</button>
           {!s.is_archived && <button className="btn-primary" onClick={markDone} disabled={!!busy}><Check size={16} aria-hidden /> {busy === "done" ? "Saving…" : "Mark as done"}</button>}
-          <button className="btn-ghost" onClick={archive} disabled={!!busy}><Archive size={16} aria-hidden /> Archive</button>
-          <button className="btn-ghost text-red-300" onClick={remove} disabled={!!busy}><Trash2 size={16} aria-hidden /> Delete</button>
+          <button className="btn-ghost text-red-300" onClick={() => setConfirmDelete(true)} disabled={!!busy}><Trash2 size={16} aria-hidden /> Delete</button>
         </div>
       </div>
       {actionError && <div className="mb-4"><ErrorBox message={actionError} /></div>}
       {s.last_error && <div className="mb-4"><ErrorBox message={`Last sync error: ${s.last_error}`} /></div>}
+      {s.status === "DELIVERED" && !s.is_archived && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
+          <span className="text-emerald-300">Delivered — mark it done to save the final details and free a Ship24 slot.</span>
+          <button onClick={markDone} disabled={!!busy} className="btn-primary px-3 py-1.5"><Check size={15} aria-hidden /> Mark as done</button>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-5">
         <div className="card p-6 lg:col-span-3">

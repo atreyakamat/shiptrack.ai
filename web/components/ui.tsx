@@ -37,3 +37,27 @@ export function Empty({ title, body, action }: { title: string; body: string; ac
 export function Loading() {
   return <p className="text-sm text-muted" role="status">Loading…</p>;
 }
+
+export function Skeleton({ className = "" }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-panel-2 ${className}`} aria-hidden />;
+}
+
+export function SkeletonStats() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" role="status" aria-label="Loading">
+      {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
+    </div>
+  );
+}
+
+export function SkeletonRows({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="card divide-y divide-line" role="status" aria-label="Loading">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="flex items-center justify-between gap-4 px-5 py-4">
+          <Skeleton className="h-4 w-40" /><Skeleton className="h-4 w-24" /><Skeleton className="h-6 w-20" />
+        </div>
+      ))}
+    </div>
+  );
+}
