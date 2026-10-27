@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from backend.extensions import db
+from backend.models.types import UTCDateTime
 
 class Notification(db.Model):
     __tablename__ = 'notification'
@@ -11,8 +12,8 @@ class Notification(db.Model):
     notification_type = db.Column(db.String(50))
     message = db.Column(db.Text)
     status = db.Column(db.String(20), default='unread')
-    sent_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    sent_at = db.Column(UTCDateTime, nullable=True)
+    created_at = db.Column(UTCDateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from backend.extensions import db
+from backend.models.types import UTCDateTime
 from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(db.Model):
@@ -8,7 +9,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(UTCDateTime, default=lambda: datetime.now(timezone.utc))
 
     shipments = db.relationship('Shipment', backref='user', lazy=True, cascade='all, delete-orphan')
     notification_preferences = db.relationship('NotificationPreference', backref='user', lazy=True, cascade='all, delete-orphan')

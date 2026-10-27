@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from backend.extensions import db
+from backend.models.types import UTCDateTime
 
 class OCRDocument(db.Model):
     __tablename__ = 'ocr_document'
@@ -13,7 +14,7 @@ class OCRDocument(db.Model):
     extracted_tracking_number = db.Column(db.String(50))
     confidence = db.Column(db.Float)
     processing_status = db.Column(db.String(50))
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(UTCDateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {

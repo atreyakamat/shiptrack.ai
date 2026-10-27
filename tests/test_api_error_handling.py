@@ -82,8 +82,8 @@ def test_missing_jwt(client):
 
 def test_expired_jwt(client, app):
     import jwt
-    from datetime import datetime, timedelta
-    token = jwt.encode({'user_id': 1, 'exp': datetime.utcnow() - timedelta(minutes=1)}, app.config['SECRET_KEY'], algorithm='HS256')
+    from datetime import datetime, timedelta, timezone
+    token = jwt.encode({'user_id': 1, 'exp': datetime.now(timezone.utc) - timedelta(minutes=1)}, app.config['SECRET_KEY'], algorithm='HS256')
     headers = {'Authorization': f'Bearer {token}'}
     res = client.get('/api/shipments', headers=headers)
     assert res.status_code == 401
@@ -91,7 +91,7 @@ def test_expired_jwt(client, app):
 def test_user_isolation(client, app, test_user, db):
     # Test User 2 cannot see User 1's shipments
     import jwt
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     from werkzeug.security import generate_password_hash
     from backend.models import User
     
@@ -99,8 +99,8 @@ def test_user_isolation(client, app, test_user, db):
     db.session.add(user2)
     db.session.commit()
     
-    token1 = jwt.encode({'user_id': test_user.id, 'exp': datetime.utcnow() + timedelta(minutes=60)}, app.config['SECRET_KEY'], algorithm='HS256')
-    token2 = jwt.encode({'user_id': user2.id, 'exp': datetime.utcnow() + timedelta(minutes=60)}, app.config['SECRET_KEY'], algorithm='HS256')
+    token1 = jwt.encode({'user_id': test_user.id, 'exp': datetime.now(timezone.utc) + timedelta(minutes=60)}, app.config['SECRET_KEY'], algorithm='HS256')
+    token2 = jwt.encode({'user_id': user2.id, 'exp': datetime.now(timezone.utc) + timedelta(minutes=60)}, app.config['SECRET_KEY'], algorithm='HS256')
     
     # User 1 creates shipment
     client.post('/api/shipments', json={'tracking_number': 'EM740043207IN', 'carrier': 'india_post'}, headers={'Authorization': f'Bearer {token1}'})

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from backend.extensions import db
+from backend.models.types import UTCDateTime
 import dateutil.parser
 
 
@@ -18,18 +19,20 @@ class TrackingEvent(db.Model):
     description = db.Column(db.String(500))
     raw_status = db.Column(db.String(200))
     source = db.Column(db.String(50))
-    event_timestamp = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    event_timestamp = db.Column(UTCDateTime)
+    created_at = db.Column(UTCDateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         db.Index('idx_event_dedup', 'shipment_id', 'event_date', 'event_time', 'status', 'location'),
     )
 
     def to_dict(self):
-        # Derive timestamp if missing - ALWAYS return ISO 8601 format
+        # Derive timestamp if missing - ALWAYS return ISO 8601 format.
+        # Event times are the carrier's local wall-clock scans (e.g. IST), not true UTC
+        # instants, so emit them tz-naive to display exactly as reported (no tz shift).
         timestamp = None
         if self.event_timestamp:
-            timestamp = self.event_timestamp.isoformat()
+            timestamp = self.event_timestamp.replace(tzinfo=None).isoformat()
         elif self.event_date:
             ts_str = self.event_date
             if self.event_time:

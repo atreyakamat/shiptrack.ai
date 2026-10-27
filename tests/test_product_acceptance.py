@@ -160,7 +160,7 @@ def test_provider_failure_preserves_shipment_data(auth_client, app, test_user, m
     
     # Existing data must remain completely intact
     with app.app_context():
-        reloaded = Shipment.query.get(sid)
+        reloaded = db.session.get(Shipment, sid)
         assert reloaded.status == "IN_TRANSIT"
         assert reloaded.current_location == "Panaji NSH"
         events_count = TrackingEvent.query.filter_by(shipment_id=sid).count()

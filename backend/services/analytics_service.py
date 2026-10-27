@@ -4,7 +4,7 @@ from backend.models.shipment import Shipment
 from backend.models.tracking_event import TrackingEvent
 from backend.extensions import db
 from sqlalchemy import func
-from datetime import datetime
+from datetime import datetime, timezone
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class AnalyticsService:
             from sqlalchemy import extract
             from datetime import datetime, timedelta
             
-            cutoff = datetime.utcnow() - timedelta(days=months * 30)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=months * 30)
             
             results = db.session.query(
                 extract('year', Shipment.created_at).label('year'),
@@ -93,7 +93,7 @@ class AnalyticsService:
             
             # Fill in missing months with 0
             result_list = []
-            current = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            current = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             for i in range(months):
                 month_start = current - timedelta(days=i * 30)
                 # Approximate month boundaries
@@ -228,7 +228,7 @@ class AnalyticsService:
         """Get shipments that haven't been updated in N days."""
         try:
             from datetime import datetime, timedelta
-            cutoff = datetime.utcnow() - timedelta(days=days_threshold)
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days_threshold)
             
             shipments = Shipment.query.filter(
                 Shipment.user_id == user_id,

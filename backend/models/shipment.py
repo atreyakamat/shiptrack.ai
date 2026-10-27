@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from backend.extensions import db
+from backend.models.types import UTCDateTime
 
 class Shipment(db.Model):
     __tablename__ = 'shipment'
@@ -14,9 +15,9 @@ class Shipment(db.Model):
     current_location = db.Column(db.String(200))
     origin = db.Column(db.String(200))
     destination = db.Column(db.String(200))
-    booked_at = db.Column(db.DateTime)
-    last_updated = db.Column(db.DateTime)
-    expected_delivery = db.Column(db.DateTime, nullable=True)
+    booked_at = db.Column(UTCDateTime)
+    last_updated = db.Column(UTCDateTime)
+    expected_delivery = db.Column(UTCDateTime, nullable=True)
     priority = db.Column(db.String(10), default='normal')
     notes = db.Column(db.Text)
     is_archived = db.Column(db.Boolean, default=False)
@@ -24,12 +25,12 @@ class Shipment(db.Model):
     tariff = db.Column(db.String(50))
     origin_pincode = db.Column(db.String(10))
     destination_pincode = db.Column(db.String(10))
-    last_successful_sync = db.Column(db.DateTime)
-    last_attempted_sync = db.Column(db.DateTime)
-    last_failed_sync = db.Column(db.DateTime)
+    last_successful_sync = db.Column(UTCDateTime)
+    last_attempted_sync = db.Column(UTCDateTime)
+    last_failed_sync = db.Column(UTCDateTime)
     last_error = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = db.Column(UTCDateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(UTCDateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         db.UniqueConstraint('carrier', 'tracking_number', name='uq_carrier_tracking'),

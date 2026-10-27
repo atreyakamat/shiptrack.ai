@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from backend.extensions import db
+from backend.models.types import UTCDateTime
 
 class RefreshLog(db.Model):
     __tablename__ = 'refresh_log'
@@ -7,8 +8,8 @@ class RefreshLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     shipment_id = db.Column(db.Integer, db.ForeignKey('shipment.id'), nullable=True)
-    started_at = db.Column(db.DateTime)
-    completed_at = db.Column(db.DateTime)
+    started_at = db.Column(UTCDateTime)
+    completed_at = db.Column(UTCDateTime)
     status = db.Column(db.String(20))
     events_found = db.Column(db.Integer, default=0)
     error_message = db.Column(db.Text, nullable=True)
