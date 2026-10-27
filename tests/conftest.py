@@ -11,6 +11,14 @@ from backend.app import create_app
 from backend.extensions import db as _db
 from backend.models import Shipment, TrackingEvent, User
 
+@pytest.fixture(autouse=True)
+def _isolate_tracking_env(monkeypatch):
+    # A developer's .env may set a real TRACKING_API_KEY / provider; tests must not depend
+    # on it. Clear these so adapter behaviour is deterministic regardless of local config.
+    for var in ('TRACKING_API_KEY', 'TRACKING_PROVIDER', 'TRACKING_PROVIDER_NAME', 'TRACKING_API_URL'):
+        monkeypatch.delenv(var, raising=False)
+
+
 @pytest.fixture
 def app():
     app = create_app('testing')

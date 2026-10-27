@@ -31,9 +31,12 @@ class TrackingService:
             
         if demo_mode or provider == 'mock' or carrier == 'mock':
             return MockCarrierAdapter()
+        if provider == 'ship24':
+            from backend.carriers.ship24 import Ship24Adapter
+            return Ship24Adapter()
         if provider in ['web', 'india_post_web', 'human_assisted']:
             return IndiaPostWebAdapter()
-        if provider in ['authorized', 'trackingmore', 'ship24', 'indiapost_direct']:
+        if provider in ['authorized', 'trackingmore', 'indiapost_direct']:
             return AuthorizedTrackingAdapter(provider_name=provider)
         if carrier == 'india_post':
             return IndiaPostAdapter()
