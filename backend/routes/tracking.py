@@ -69,6 +69,71 @@ def refresh_all():
         _log_error('/shipments/refresh-all POST', e)
         return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Internal server error'}}), 500
 
+@tracking_bp.route('/tracking/captcha/start', methods=['POST'])
+@token_required
+@limiter.limit("20 per minute")
+def captcha_start():
+    """Open an India Post session and return the CAPTCHA image for the user to solve in-app."""
+    try:
+        data = request.json or {}
+        tracking_number = (data.get('tracking_number') or '').strip().upper()
+        if not tracking_number:
+            return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'tracking_number is required'}}), 400
+        from backend.carriers.india_post_captcha_manager import IndiaPostCaptchaManager
+        result = IndiaPostCaptchaManager.instance().start_session(tracking_number, g.current_user.id)
+        return jsonify({'success': True, 'data': result}), 200
+    except ValueError as ve:
+        return jsonify({'success': False, 'error': {'code': 'INVALID_TRACKING_NUMBER', 'message': str(ve)}}), 422
+    except Exception as e:
+        _log_error('/tracking/captcha/start POST', e)
+        return jsonify({'success': False, 'error': {'code': 'PROVIDER_UNAVAILABLE', 'message': 'Could not reach India Post. Please try again.'}}), 503
+
+
+@tracking_bp.route('/tracking/captcha/submit', methods=['POST'])
+@token_required
+@limiter.limit("30 per minute")
+def captcha_submit():
+    """Submit the human's CAPTCHA answer; on success, persist the result to the shipment."""
+    try:
+        data = request.json or {}
+        session_id = data.get('session_id')
+        answer = (data.get('answer') or '').strip()
+        shipment_id = data.get('shipment_id')
+        if not session_id or not answer:
+            return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': 'session_id and answer are required'}}), 400
+
+        from backend.carriers.india_post_captcha_manager import IndiaPostCaptchaManager
+        outcome = IndiaPostCaptchaManager.instance().submit_answer(session_id, answer, g.current_user.id)
+
+        status = outcome.get('status')
+        if status == 'captcha_failed':
+            return jsonify({'success': True, 'data': {'status': 'captcha_failed',
+                            'captcha_image': outcome.get('captcha_image'), 'message': outcome.get('message')}}), 200
+        if status == 'not_found':
+            return jsonify({'success': False, 'error': {'code': 'NOT_FOUND', 'message': outcome.get('message')}}), 404
+        if status == 'success':
+            tracking_data = outcome['data']
+            if shipment_id:
+                shipment = ShipmentService.get_shipment(g.current_user.id, shipment_id)
+                if not shipment:
+                    return jsonify({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Shipment not found'}}), 404
+                TrackingService.persist_tracking_result(shipment_id, tracking_data)
+                updated = ShipmentService.get_shipment(g.current_user.id, shipment_id)
+                payload = updated.to_dict()
+                payload['events'] = [e.to_dict() for e in updated.tracking_events]
+                return jsonify({'success': True, 'data': {'status': 'success', 'shipment': payload}}), 200
+            return jsonify({'success': True, 'data': {'status': 'success', 'tracking': tracking_data}}), 200
+
+        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Unexpected tracking state'}}), 500
+    except LookupError as le:
+        return jsonify({'success': False, 'error': {'code': 'SESSION_EXPIRED', 'message': str(le)}}), 410
+    except ValueError as ve:
+        return jsonify({'success': False, 'error': {'code': 'BAD_REQUEST', 'message': str(ve)}}), 400
+    except Exception as e:
+        _log_error('/tracking/captcha/submit POST', e)
+        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Could not complete tracking. Please try again.'}}), 500
+
+
 @tracking_bp.route('/shipments/<int:id>/history', methods=['GET'])
 @token_required
 def get_history(id):

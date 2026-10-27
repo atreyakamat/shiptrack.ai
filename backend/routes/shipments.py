@@ -44,18 +44,26 @@ def create_shipment():
     try:
         data = request.json
         shipment = ShipmentService.create_shipment(g.current_user.id, data)
-        
-        # Trigger initial refresh but decouple failure from shipment creation
-        from backend.services.tracking_service import TrackingService
-        try:
-            TrackingService.refresh_shipment(shipment.id)
-        except Exception as refresh_err:
-            logger.warning(
-                f"request_id={g.get('request_id', 'unknown')} "
-                f"Initial tracking refresh failed for {shipment.id}, but shipment was saved: {refresh_err}"
-            )
-            
-        return jsonify({'success': True, 'data': shipment.to_dict()}), 201
+
+        # The 'web' provider needs the user to solve a CAPTCHA in-app, so we don't auto-track
+        # on create — the UI starts that flow. Other providers refresh immediately.
+        from flask import current_app
+        provider = (current_app.config.get('TRACKING_PROVIDER') or 'mock').lower()
+        demo = current_app.config.get('TRACKING_DEMO_MODE', True)
+        needs_captcha = provider in ('web', 'india_post_web', 'human_assisted') and not demo
+        if not needs_captcha:
+            from backend.services.tracking_service import TrackingService
+            try:
+                TrackingService.refresh_shipment(shipment.id)
+            except Exception as refresh_err:
+                logger.warning(
+                    f"request_id={g.get('request_id', 'unknown')} "
+                    f"Initial tracking refresh failed for {shipment.id}, but shipment was saved: {refresh_err}"
+                )
+
+        resp = shipment.to_dict()
+        resp['needs_captcha'] = needs_captcha
+        return jsonify({'success': True, 'data': resp}), 201
     except ValueError as ve:
         err_msg = str(ve)
         if "already exists" in err_msg.lower():

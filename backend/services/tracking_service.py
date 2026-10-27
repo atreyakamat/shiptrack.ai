@@ -200,6 +200,52 @@ class TrackingService:
         return result
 
     @staticmethod
+    def persist_tracking_result(shipment_id: int, tracking_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply a canonical tracking result (from any source) to a shipment.
+
+        Shared by the automatic refresh and the in-app CAPTCHA relay so both store
+        events and update status/location identically.
+        """
+        shipment = db.session.query(Shipment).get(shipment_id)
+        if not shipment:
+            return {'status': 'error', 'error_message': 'Shipment not found'}
+
+        events = tracking_data.get('events', [])
+        added_count = TrackingService.deduplicate_events(shipment_id, events)
+        details = tracking_data.get('details', {})
+        old_status = shipment.status
+        new_status = details.get('status', old_status)
+
+        shipment.status = new_status
+        shipment.article_type = details.get('article_type', shipment.article_type)
+        shipment.origin = details.get('origin', shipment.origin)
+        shipment.destination = details.get('destination', shipment.destination)
+        if details.get('destination_pincode'):
+            shipment.destination_pincode = details.get('destination_pincode')
+        if details.get('origin_pincode'):
+            shipment.origin_pincode = details.get('origin_pincode')
+        if events:
+            adapter = TrackingService.get_carrier_adapter(shipment.carrier)
+            shipment.current_location = adapter.get_latest_location(events)
+        shipment.last_updated = datetime.now(timezone.utc)
+        shipment.last_successful_sync = datetime.now(timezone.utc)
+        shipment.last_error = None
+        db.session.commit()
+
+        if old_status != new_status:
+            NotificationService.trigger_event(
+                event_type='STATUS_CHANGED', shipment_id=shipment_id,
+                message=f"Shipment {shipment.tracking_number} status changed to {new_status}",
+                context={'tracking_number': shipment.tracking_number, 'location': shipment.current_location})
+            if new_status == 'DELIVERED':
+                NotificationService.trigger_event(
+                    event_type='DELIVERED', shipment_id=shipment_id,
+                    message=f"Shipment {shipment.tracking_number} has been delivered",
+                    context={'tracking_number': shipment.tracking_number})
+
+        return {'status': 'success', 'events_added': added_count, 'shipment_status': new_status}
+
+    @staticmethod
     def refresh_all_active(user_id: int = None):
         query = Shipment.query.filter(
             Shipment.is_archived == False,

@@ -6,8 +6,10 @@ import { Archive, ArrowLeft, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import { ErrorBox, Loading } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Timeline } from "@/components/Timeline";
+import { CaptchaModal } from "@/components/CaptchaModal";
 import { api, post } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
+import { useHealth } from "@/lib/useHealth";
 import { formatDate, formatDateTime } from "@/lib/format";
 import type { AiSummary, Shipment } from "@/lib/types";
 
@@ -15,9 +17,11 @@ export default function ShipmentDetail({ params }: { params: Promise<{ id: strin
   const { id } = use(params);
   const router = useRouter();
   const { data: s, error, loading, reload } = useApi<Shipment>(`/shipments/${id}`);
+  const health = useHealth();
   const [ai, setAi] = useState<AiSummary | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [captcha, setCaptcha] = useState(false);
 
   useEffect(() => {
     api<AiSummary>(`/ai/${id}/summary`).then(setAi).catch(() => setAi(null));
@@ -30,7 +34,11 @@ export default function ShipmentDetail({ params }: { params: Promise<{ id: strin
     finally { setBusy(null); }
   }
 
-  const refresh = () => run("refresh", async () => { await post(`/shipments/${id}/refresh`); await reload(); });
+  // In web mode India Post needs an in-app CAPTCHA; otherwise refresh is a direct call.
+  const refresh = () => {
+    if (health?.live_mode === "web") { setCaptcha(true); return; }
+    run("refresh", async () => { await post(`/shipments/${id}/refresh`); await reload(); });
+  };
   const generate = () => run("ai", async () => setAi(await post<AiSummary>(`/ai/${id}/generate`)));
   const archive = () => run("archive", async () => { await post(`/shipments/${id}/archive`); router.push("/shipments"); });
   const remove = () => {
@@ -49,6 +57,14 @@ export default function ShipmentDetail({ params }: { params: Promise<{ id: strin
 
   return (
     <>
+      {captcha && (
+        <CaptchaModal
+          trackingNumber={s.tracking_number}
+          shipmentId={Number(id)}
+          onClose={() => setCaptcha(false)}
+          onSolved={async () => { setCaptcha(false); await reload(); }}
+        />
+      )}
       <Link href="/shipments" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-white"><ArrowLeft size={16} aria-hidden /> Shipments</Link>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>

@@ -101,3 +101,48 @@ def test_closed_window_surfaces_friendly_error(app, db, india_post_shipment):
         result = TrackingService.refresh_shipment(sid)
     assert result["status"] == "error"
     assert "window was closed" in result["error_message"]
+
+
+def test_persist_tracking_result_stores_events_and_status(app, db, india_post_shipment):
+    """persist_tracking_result (used by both refresh and the CAPTCHA relay) stores cleanly."""
+    html = build_india_post_page(events=ON_HOLD_EVENTS)
+    canonical = _canonical(html, "EY672780687IN")
+    sid = india_post_shipment.id
+    app.config["TRACKING_PROVIDER"] = "web"
+    app.config["TRACKING_DEMO_MODE"] = False
+    res = TrackingService.persist_tracking_result(sid, canonical)
+    db.session.expire_all()
+    assert res["status"] == "success"
+    assert TrackingEvent.query.filter_by(shipment_id=sid).count() == len(ON_HOLD_EVENTS)
+    assert db.session.get(Shipment, sid).status == BaseCarrierAdapter.STATUS_EXCEPTION
+
+
+def test_captcha_submit_endpoint_persists_to_shipment(app, db, auth_client, test_user):
+    """The /tracking/captcha/submit endpoint persists a solved result to the shipment."""
+    from unittest.mock import patch
+    s = Shipment(user_id=test_user.id, tracking_number="EY672780687IN", carrier="india_post", status="UNKNOWN")
+    db.session.add(s); db.session.commit(); sid = s.id
+    canonical = _canonical(build_india_post_page(events=ON_HOLD_EVENTS), "EY672780687IN")
+
+    with patch("backend.carriers.india_post_captcha_manager.IndiaPostCaptchaManager.instance") as inst:
+        inst.return_value.submit_answer.return_value = {"status": "success", "data": canonical}
+        res = auth_client.post("/api/tracking/captcha/submit",
+                               json={"session_id": "abc", "answer": "XYZ12", "shipment_id": sid})
+    assert res.status_code == 200
+    body = res.json["data"]
+    assert body["status"] == "success"
+    assert len(body["shipment"]["events"]) == len(ON_HOLD_EVENTS)
+    db.session.expire_all()
+    assert db.session.get(Shipment, sid).status == BaseCarrierAdapter.STATUS_EXCEPTION
+
+
+def test_captcha_submit_wrong_answer_returns_retry(app, db, auth_client):
+    from unittest.mock import patch
+    with patch("backend.carriers.india_post_captcha_manager.IndiaPostCaptchaManager.instance") as inst:
+        inst.return_value.submit_answer.return_value = {
+            "status": "captcha_failed", "captcha_image": "data:image/jpeg;base64,xxx", "message": "try again"}
+        res = auth_client.post("/api/tracking/captcha/submit",
+                               json={"session_id": "abc", "answer": "nope"})
+    assert res.status_code == 200
+    assert res.json["data"]["status"] == "captcha_failed"
+    assert res.json["data"]["captcha_image"].startswith("data:image")

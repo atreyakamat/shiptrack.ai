@@ -2,11 +2,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ErrorBox, PageHeader } from "@/components/ui";
+import { CaptchaModal } from "@/components/CaptchaModal";
 import { api, post } from "@/lib/api";
 import { detectCarrier, normalizeTrackingId } from "@/lib/carrier";
 import type { Shipment } from "@/lib/types";
 
 interface OcrResult { id: number; extracted_tracking_number: string | null; candidates: string[]; is_demo?: boolean }
+type CreatedShipment = Shipment & { needs_captcha?: boolean };
 
 export default function NewShipment() {
   const router = useRouter();
@@ -16,6 +18,7 @@ export default function NewShipment() {
   const [busy, setBusy] = useState(false);
   const carrier = detectCarrier(trackingNumber);
   const [ocr, setOcr] = useState<OcrResult | null>(null);
+  const [pending, setPending] = useState<CreatedShipment | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,8 +31,14 @@ export default function NewShipment() {
     try {
       const tn = normalizeTrackingId(trackingNumber);
       const s = ocr
-        ? await post<Shipment>("/ocr/confirm", { document_id: ocr.id, tracking_number: tn, carrier: carrier.code })
-        : await post<Shipment>("/shipments", { tracking_number: tn, carrier: carrier.code, description: description || undefined });
+        ? await post<CreatedShipment>("/ocr/confirm", { document_id: ocr.id, tracking_number: tn, carrier: carrier.code })
+        : await post<CreatedShipment>("/shipments", { tracking_number: tn, carrier: carrier.code, description: description || undefined });
+      // In web mode the shipment is saved but needs an in-app CAPTCHA for its first lookup.
+      if (s.needs_captcha) {
+        setPending(s);
+        setBusy(false);
+        return;
+      }
       router.push(`/shipments/${s.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not add shipment");
@@ -55,6 +64,14 @@ export default function NewShipment() {
 
   return (
     <div className="max-w-xl">
+      {pending && (
+        <CaptchaModal
+          trackingNumber={pending.tracking_number}
+          shipmentId={pending.id}
+          onClose={() => router.push(`/shipments/${pending.id}`)}
+          onSolved={() => router.push(`/shipments/${pending.id}`)}
+        />
+      )}
       <PageHeader title="Add shipment" subtitle="Paste an India Post tracking ID or scan a postal receipt" />
       <form onSubmit={submit} className="card space-y-4 p-6">
         <div>
