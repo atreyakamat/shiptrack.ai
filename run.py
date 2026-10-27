@@ -18,4 +18,4 @@ if __name__ == '__main__':
     print(f'  Running on http://localhost:{port}')
     print(f'  Debug mode: {debug}')
     print(f'  Demo mode: {app.config.get("TRACKING_DEMO_MODE", True)}\n')
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    app.run(host=os.getenv('HOST', '127.0.0.1'), port=port, debug=debug)

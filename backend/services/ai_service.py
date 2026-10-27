@@ -39,15 +39,18 @@ class AIService:
     def generate_summary(shipment: Shipment) -> Dict[str, Any]:
         try:
             provider = AIService.get_provider()
-            events = TrackingEvent.query.filter_by(shipment_id=shipment.id).order_by(TrackingEvent.id.asc()).all()
+            events = TrackingEvent.query.filter_by(shipment_id=shipment.id).order_by(TrackingEvent.event_timestamp.asc().nullsfirst(), TrackingEvent.id.asc()).all()
             
             health = AIService.classify_health(shipment)
             
             # Interpretive rule-based mock for all providers initially
             status = shipment.status
-            last_location = events[-1].location if events else 'Unknown Location'
+            last_location = (events[-1].location if events else None) or 'an unknown location'
             
-            if status == 'DELIVERED':
+            if not events:
+                summary_text = f"No tracking scans have been recorded for {shipment.tracking_number} yet. New parcels can take a day or two to appear."
+                prediction = "Check back after the carrier's first scan."
+            elif status == 'DELIVERED':
                 summary_text = f"Your parcel was successfully delivered at {last_location}."
                 prediction = "Already delivered."
             elif status == 'OUT_FOR_DELIVERY':

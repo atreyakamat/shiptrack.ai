@@ -73,9 +73,9 @@ class TrackingService:
                     try:
                         dt_str = f"{new_event.event_date} {new_event.event_time}".strip()
                         if dt_str:
-                            new_event.event_timestamp = dateutil.parser.parse(dt_str)
-                    except:
-                        pass
+                            new_event.event_timestamp = dateutil.parser.parse(dt_str, dayfirst=True)
+                    except (ValueError, OverflowError):
+                        logger.warning(f"Unparseable event timestamp: {dt_str!r}")
                         
                     db.session.add(new_event)
                     added_count += 1

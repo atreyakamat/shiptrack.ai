@@ -1,0 +1,97 @@
+"use client";
+import { use, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Archive, ArrowLeft, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { ErrorBox, Loading } from "@/components/ui";
+import { StatusBadge } from "@/components/StatusBadge";
+import { Timeline } from "@/components/Timeline";
+import { api, post } from "@/lib/api";
+import { useApi } from "@/lib/useApi";
+import { formatDate, formatDateTime } from "@/lib/format";
+import type { AiSummary, Shipment } from "@/lib/types";
+
+export default function ShipmentDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const router = useRouter();
+  const { data: s, error, loading, reload } = useApi<Shipment>(`/shipments/${id}`);
+  const [ai, setAi] = useState<AiSummary | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<AiSummary>(`/ai/${id}/summary`).then(setAi).catch(() => setAi(null));
+  }, [id]);
+
+  async function run(name: string, fn: () => Promise<unknown>) {
+    setBusy(name);
+    setActionError(null);
+    try { await fn(); } catch (e) { setActionError(e instanceof Error ? e.message : "Action failed"); }
+    finally { setBusy(null); }
+  }
+
+  const refresh = () => run("refresh", async () => { await post(`/shipments/${id}/refresh`); await reload(); });
+  const generate = () => run("ai", async () => setAi(await post<AiSummary>(`/ai/${id}/generate`)));
+  const archive = () => run("archive", async () => { await post(`/shipments/${id}/archive`); router.push("/shipments"); });
+  const remove = () => {
+    if (!confirm("Delete this shipment permanently?")) return;
+    run("delete", async () => { await api(`/shipments/${id}`, { method: "DELETE" }); router.push("/shipments"); });
+  };
+
+  if (loading && !s) return <Loading />;
+  if (error || !s) return <ErrorBox message={error ?? "Shipment not found"} />;
+
+  const fields: [string, string | null][] = [
+    ["Carrier", s.carrier], ["Type", s.article_type], ["Origin", s.origin], ["Destination", s.destination],
+    ["Current location", s.current_location], ["Expected delivery", s.expected_delivery ? formatDate(s.expected_delivery) : null],
+    ["Last synced", s.last_successful_sync ? formatDateTime(s.last_successful_sync) : null],
+  ];
+
+  return (
+    <>
+      <Link href="/shipments" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-white"><ArrowLeft size={16} aria-hidden /> Shipments</Link>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-mono text-2xl font-bold">{s.tracking_number}</h1>
+          <p className="mt-1 text-sm text-muted">{s.description ?? "No description"}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge status={s.status} />
+          <button className="btn-ghost" onClick={refresh} disabled={!!busy}><RefreshCw size={16} className={busy === "refresh" ? "animate-spin" : ""} aria-hidden /> Refresh</button>
+          <button className="btn-ghost" onClick={archive} disabled={!!busy}><Archive size={16} aria-hidden /> Archive</button>
+          <button className="btn-ghost text-red-300" onClick={remove} disabled={!!busy}><Trash2 size={16} aria-hidden /> Delete</button>
+        </div>
+      </div>
+      {busy === "refresh" && <p className="mb-4 text-xs text-muted" role="status">Refreshing. If an India Post browser window opened, enter the CAPTCHA there and press TRACK.</p>}
+      {actionError && <div className="mb-4"><ErrorBox message={actionError} /></div>}
+      {s.last_error && <div className="mb-4"><ErrorBox message={`Last sync error: ${s.last_error}`} /></div>}
+
+      <div className="grid gap-6 lg:grid-cols-5">
+        <div className="card p-6 lg:col-span-3">
+          <h2 className="mb-5 font-display text-lg font-semibold">Tracking history</h2>
+          <Timeline events={s.events ?? []} />
+        </div>
+        <div className="space-y-6 lg:col-span-2">
+          <div className="card border-indigo/30 p-6">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-display text-lg font-semibold"><Sparkles size={18} className="text-indigo" aria-hidden /> AI summary</h2>
+              <button className="btn-ghost px-3 py-1.5" onClick={generate} disabled={!!busy}>{busy === "ai" ? "…" : ai ? "Regenerate" : "Generate"}</button>
+            </div>
+            {ai ? (
+              <div className="space-y-2 text-sm">
+                <p>{ai.summary}</p>
+                <p className="text-muted"><span className="font-semibold text-slate-300">Delays:</span> {ai.delay_analysis}</p>
+                <p className="text-muted"><span className="font-semibold text-slate-300">Outlook:</span> {ai.prediction}</p>
+              </div>
+            ) : <p className="text-sm text-muted">No summary yet.</p>}
+          </div>
+          <dl className="card divide-y divide-line text-sm">
+            {fields.filter(([, v]) => v).map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-4 px-5 py-3"><dt className="text-muted">{k}</dt><dd className="text-right font-medium">{v}</dd></div>
+            ))}
+          </dl>
+        </div>
+      </div>
+    </>
+  );
+}

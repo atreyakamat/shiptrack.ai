@@ -142,3 +142,56 @@ def test_tracking_service_provider_selection_web(app):
 
         app.config['TRACKING_DEMO_MODE'] = True
         app.config['TRACKING_PROVIDER'] = 'mock'
+
+
+# Regression: India Post obfuscates real values onto <canvas> with the true text in
+# aria-label, and injects hidden [data-fake] decoy spans. The adapter must read the
+# aria-labels and drop decoys.
+OBFUSCATED_HTML = """
+<html><body>
+<div><span>Article Type:</span>
+  <span role="img" aria-label="SP_INLAND_DOC"><canvas aria-hidden="true"></canvas></span>
+  <span aria-hidden="true" style="left:-9999px"><span data-fake="junk1">XXjunk1YY</span></span>
+</div>
+<div><span>Booked At:</span>
+  <span role="img" aria-label="Goregaon RS SO"><canvas></canvas></span></div>
+<div><span>Destination:</span>
+  <span role="img" aria-label="Tivim S.O"><canvas></canvas></span></div>
+<table>
+  <tr><th>Event</th><th>Date</th><th>Time</th><th>Office</th><th>Remarks</th></tr>
+  <tr>
+    <td><span role="img" aria-label="Item Booked"><canvas></canvas></span><span data-fake="d">XXdecoyYY</span></td>
+    <td><span role="img" aria-label="22/10/2026"></span></td>
+    <td><span role="img" aria-label="17:35:49"></span></td>
+    <td><span role="img" aria-label="Goregaon RS SO"></span></td>
+    <td><span role="img" aria-label="-"></span></td>
+  </tr>
+  <tr>
+    <td><span role="img" aria-label="Item Kept on Hold"></span></td>
+    <td><span role="img" aria-label="26/10/2026"></span></td>
+    <td><span role="img" aria-label="19:26:43"></span></td>
+    <td><span role="img" aria-label="Tivim S.O"></span></td>
+    <td><span role="img" aria-label="Addressee Absent[For enquiry]"></span></td>
+  </tr>
+</table>
+</body></html>
+"""
+
+
+def test_deobfuscates_canvas_aria_labels_and_drops_decoys():
+    adapter = IndiaPostWebAdapter()
+    result = adapter.extract_table_data(OBFUSCATED_HTML, "EY672780687IN")
+    events = result["events"]
+    details = result["details"]
+    assert len(events) == 2
+    # No decoy junk leaked into any field.
+    blob = str(events) + str(details)
+    assert "XX" not in blob and "decoy" not in blob.lower()
+    assert events[0]["status"] == "Item Booked"
+    assert events[0]["location"] == "Goregaon RS SO"
+    assert events[0]["date"] == "22/10/2026"
+    assert details["article_type"] == "SP_INLAND_DOC"
+    assert details["origin"] == "Goregaon RS SO"
+    assert details["destination"] == "Tivim S.O"
+    # "Item Kept on Hold" -> EXCEPTION
+    assert details["status"] == "EXCEPTION"

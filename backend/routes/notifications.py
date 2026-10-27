@@ -6,7 +6,7 @@ from backend.utils.auth import token_required
 
 notifications_bp = Blueprint('notifications', __name__)
 
-@notifications_bp.route('/', methods=['GET'])
+@notifications_bp.route('/', methods=['GET'], strict_slashes=False)
 @token_required
 def get_notifications():
     try:

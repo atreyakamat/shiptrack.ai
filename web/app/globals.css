@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #020617;
+  --color-panel: #0b1226;
+  --color-panel-2: #111a33;
+  --color-line: #1e293b;
+  --color-muted: #94a3b8;
+  --color-sky: #38bdf8;
+  --color-indigo: #818cf8;
+  --color-violet: #c084fc;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-grotesk), system-ui, sans-serif;
+}
+
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body { background: var(--color-ink); color: #f8fafc; min-height: 100vh; }
+::selection { background: rgba(56, 189, 248, 0.25); }
+
+@utility card { @apply rounded-2xl border border-line bg-panel/80 backdrop-blur; }
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky; }
+@utility btn-primary { @apply btn bg-sky text-ink hover:bg-sky/90; }
+@utility btn-ghost { @apply btn border border-line text-slate-200 hover:bg-panel-2; }
+@utility input { @apply w-full rounded-xl border border-line bg-ink px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-sky focus:outline-none focus:ring-2 focus:ring-sky/30; }
+@utility label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted; }
+@utility gradient-text { background-image: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc, #38bdf8); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shift 6s linear infinite; }
+
+@keyframes shift { to { background-position: 200% center; } }
+@keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

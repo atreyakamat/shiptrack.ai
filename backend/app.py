@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import uuid
 from flask import Flask, g, request
@@ -29,7 +30,7 @@ def create_app(config_name='default'):
     
     # Init extensions
     db.init_app(app)
-    cors.init_app(app)
+    cors.init_app(app, origins=[o.strip() for o in os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',') if o.strip()])
     migrate.init_app(app, db)
     
     from backend.extensions import limiter
@@ -89,4 +90,4 @@ def seed_db(app):
 if __name__ == '__main__':
     app = create_app()
     seed_db(app)
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=os.getenv('FLASK_DEBUG') == '1', host=os.getenv('HOST', '127.0.0.1'), port=int(os.getenv('PORT', '5000')))

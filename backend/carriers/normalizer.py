@@ -21,7 +21,10 @@ class CarrierNormalizer:
         'in transit': BaseCarrierAdapter.STATUS_IN_TRANSIT,
         'transit': BaseCarrierAdapter.STATUS_IN_TRANSIT,
         'bag received': BaseCarrierAdapter.STATUS_ARRIVED_AT_FACILITY,
+        'item bagged': BaseCarrierAdapter.STATUS_DISPATCHED,
+        'bagged': BaseCarrierAdapter.STATUS_DISPATCHED,
         'arrived at facility': BaseCarrierAdapter.STATUS_ARRIVED_AT_FACILITY,
+        'received at destination': BaseCarrierAdapter.STATUS_ARRIVED_AT_FACILITY,
         'arrivedathub': BaseCarrierAdapter.STATUS_ARRIVED_AT_FACILITY,
         'received': BaseCarrierAdapter.STATUS_ARRIVED_AT_FACILITY,
         'item received': BaseCarrierAdapter.STATUS_ARRIVED_AT_FACILITY,
@@ -36,6 +39,11 @@ class CarrierNormalizer:
         'customshold': BaseCarrierAdapter.STATUS_DELAYED,
         'attemptfailed': BaseCarrierAdapter.STATUS_EXCEPTION,
         'exception': BaseCarrierAdapter.STATUS_EXCEPTION,
+        'on hold': BaseCarrierAdapter.STATUS_EXCEPTION,
+        'kept on hold': BaseCarrierAdapter.STATUS_EXCEPTION,
+        'hold': BaseCarrierAdapter.STATUS_EXCEPTION,
+        'addressee absent': BaseCarrierAdapter.STATUS_EXCEPTION,
+        'undelivered': BaseCarrierAdapter.STATUS_EXCEPTION,
         'returned': BaseCarrierAdapter.STATUS_RETURNED,
         'rto': BaseCarrierAdapter.STATUS_RETURNED,
         'return': BaseCarrierAdapter.STATUS_RETURNED,
@@ -74,6 +82,8 @@ class CarrierNormalizer:
             or raw_event.get('status')
             or raw_event.get('substatus')
             or raw_event.get('checkpoint_status')
+            or raw_event.get('checkpoint_delivery_status')
+            or raw_event.get('tracking_detail')
             or raw_event.get('message')
             or ''
         )
@@ -94,6 +104,7 @@ class CarrierNormalizer:
         description = (
             raw_event.get('description')
             or raw_event.get('details')
+            or raw_event.get('tracking_detail')
             or raw_event.get('message')
             or raw_status
         )
@@ -123,8 +134,16 @@ class CarrierNormalizer:
         """Normalizes an entire carrier API response payload."""
         # Check standard aggregator response patterns (e.g., TrackingMore, Ship24, Direct)
         data = raw_payload.get('data', raw_payload)
+        # TrackingMore v4 wraps results as {"data": {"items": [...]}} (or accepted/trackings variants)
+        if isinstance(data, dict):
+            for wrapper in ('items', 'accepted', 'trackings'):
+                if isinstance(data.get(wrapper), list) and data[wrapper]:
+                    data = data[wrapper][0]
+                    break
         if isinstance(data, list) and len(data) > 0:
             data = data[0]
+        if not isinstance(data, dict):
+            data = {}
 
         raw_events = (
             data.get('events')
