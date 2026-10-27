@@ -2,12 +2,12 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Archive, ArrowLeft, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { Archive, ArrowLeft, Check, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import { ErrorBox, Loading } from "@/components/ui";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Timeline } from "@/components/Timeline";
 import { CaptchaModal } from "@/components/CaptchaModal";
-import { api, post } from "@/lib/api";
+import { ApiError, api, post } from "@/lib/api";
 import { useApi } from "@/lib/useApi";
 import { useHealth } from "@/lib/useHealth";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -35,11 +35,19 @@ export default function ShipmentDetail({ params }: { params: Promise<{ id: strin
   }
 
   // In web mode India Post needs an in-app CAPTCHA; otherwise refresh is a direct call.
+  // If Ship24's monthly quota is spent, fall back to the CAPTCHA relay.
   const refresh = () => {
     if (health?.live_mode === "web") { setCaptcha(true); return; }
-    run("refresh", async () => { await post(`/shipments/${id}/refresh`); await reload(); });
+    run("refresh", async () => {
+      try { await post(`/shipments/${id}/refresh`); await reload(); }
+      catch (e) {
+        if (e instanceof ApiError && e.code === "PROVIDER_QUOTA") { setCaptcha(true); return; }
+        throw e;
+      }
+    });
   };
   const generate = () => run("ai", async () => setAi(await post<AiSummary>(`/ai/${id}/generate`)));
+  const markDone = () => run("done", async () => { await post(`/shipments/${id}/done`); router.push("/shipments"); });
   const archive = () => run("archive", async () => { await post(`/shipments/${id}/archive`); router.push("/shipments"); });
   const remove = () => {
     if (!confirm("Delete this shipment permanently?")) return;
@@ -74,6 +82,7 @@ export default function ShipmentDetail({ params }: { params: Promise<{ id: strin
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={s.status} />
           <button className="btn-ghost" onClick={refresh} disabled={!!busy}><RefreshCw size={16} className={busy === "refresh" ? "animate-spin" : ""} aria-hidden /> Refresh</button>
+          {!s.is_archived && <button className="btn-primary" onClick={markDone} disabled={!!busy}><Check size={16} aria-hidden /> {busy === "done" ? "Saving…" : "Mark as done"}</button>}
           <button className="btn-ghost" onClick={archive} disabled={!!busy}><Archive size={16} aria-hidden /> Archive</button>
           <button className="btn-ghost text-red-300" onClick={remove} disabled={!!busy}><Trash2 size={16} aria-hidden /> Delete</button>
         </div>

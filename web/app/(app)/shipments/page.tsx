@@ -14,6 +14,7 @@ export default function Shipments() {
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [status, setStatus] = useState("");
+  const [showDone, setShowDone] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search.trim()), 300);
@@ -22,7 +23,8 @@ export default function Shipments() {
 
   // The backend ignores the status filter when a search term is present, so filter status client-side.
   const { data, error, loading } = useApi<Shipment[]>(`/shipments${debounced ? `?search=${encodeURIComponent(debounced)}` : ""}`);
-  const rows = (data ?? []).filter((s) => !s.is_archived && (!status || s.status === status));
+  const rows = (data ?? []).filter((s) => (showDone ? s.is_archived : !s.is_archived) && (!status || s.status === status));
+  const doneCount = (data ?? []).filter((s) => s.is_archived).length;
 
   return (
     <>
@@ -37,6 +39,10 @@ export default function Shipments() {
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
         </select>
+        <button type="button" onClick={() => setShowDone((v) => !v)} aria-pressed={showDone}
+          className={showDone ? "btn-primary" : "btn-ghost"}>
+          {showDone ? "Showing done" : `Done${doneCount ? ` (${doneCount})` : ""}`}
+        </button>
       </div>
       {error && <ErrorBox message={error} />}
       {loading && !data && <Loading />}

@@ -54,11 +54,21 @@ def create_shipment():
         if not needs_captcha:
             from backend.services.tracking_service import TrackingService
             try:
-                TrackingService.refresh_shipment(shipment.id)
+                result = TrackingService.refresh_shipment(shipment.id) or {}
+                # If Ship24's monthly quota is spent, fall back to the in-app CAPTCHA relay.
+                if result.get('status') == 'error':
+                    err = (result.get('error_message') or '').lower()
+                    if 'quota' in err or 'limit' in err:
+                        needs_captcha = True
+                    else:
+                        logger.warning(
+                            f"request_id={g.get('request_id', 'unknown')} "
+                            f"Initial tracking refresh failed for {shipment.id}, but shipment was saved: {err}"
+                        )
             except Exception as refresh_err:
                 logger.warning(
                     f"request_id={g.get('request_id', 'unknown')} "
-                    f"Initial tracking refresh failed for {shipment.id}, but shipment was saved: {refresh_err}"
+                    f"Initial tracking refresh raised for {shipment.id}, but shipment was saved: {refresh_err}"
                 )
 
         resp = shipment.to_dict()
@@ -112,6 +122,36 @@ def delete_shipment(id):
     except Exception as e:
         _log_error(f'/shipments/{id} DELETE', e)
         return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Internal server error'}}), 500
+
+@shipments_bp.route('/shipments/<int:id>/done', methods=['POST'])
+@token_required
+def mark_done(id):
+    """Capture the final tracking details, save them permanently, then archive.
+
+    This is the 'Mark as done' action: a last fetch so nothing is lost, then the
+    shipment is archived (kept in the DB forever, excluded from active tracking).
+    """
+    try:
+        shipment = ShipmentService.get_shipment(g.current_user.id, id)
+        if not shipment:
+            return jsonify({'success': False, 'error': {'code': 'NOT_FOUND', 'message': 'Shipment not found'}}), 404
+
+        # Best-effort final scrape (refreshing an existing tracker is free on Ship24).
+        from backend.services.tracking_service import TrackingService
+        try:
+            TrackingService.refresh_shipment(id)
+        except Exception as fetch_err:
+            logger.warning(f"Final fetch before marking done failed for {id}: {fetch_err}")
+
+        ShipmentService.archive_shipment(g.current_user.id, id)
+        updated = ShipmentService.get_shipment(g.current_user.id, id)
+        data = updated.to_dict()
+        data['events'] = [e.to_dict() for e in updated.tracking_events]
+        return jsonify({'success': True, 'data': data}), 200
+    except Exception as e:
+        _log_error(f'/shipments/{id}/done POST', e)
+        return jsonify({'success': False, 'error': {'code': 'INTERNAL_ERROR', 'message': 'Internal server error'}}), 500
+
 
 @shipments_bp.route('/shipments/<int:id>/archive', methods=['POST'])
 @token_required

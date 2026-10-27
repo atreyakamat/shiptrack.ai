@@ -35,7 +35,11 @@ def refresh_shipment(id):
             error_msg_lower = error_msg.lower()
             clean_msg = error_msg.replace("NotImplementedError: ", "").replace("ValueError: ", "")
             
-            if 'invalid tracking number' in error_msg_lower or 'valueerror' in error_msg_lower:
+            if 'quota' in error_msg_lower:
+                # Ship24 monthly quota spent — the UI offers the in-app CAPTCHA relay instead.
+                logger.info("Returning PROVIDER_QUOTA")
+                return jsonify({'success': False, 'error': {'code': 'PROVIDER_QUOTA', 'message': 'Ship24 monthly limit reached. Track this one with the in-app CAPTCHA instead.'}}), 429
+            elif 'invalid tracking number' in error_msg_lower or 'valueerror' in error_msg_lower:
                 logger.info("Returning INVALID_TRACKING_NUMBER")
                 return jsonify({'success': False, 'error': {'code': 'INVALID_TRACKING_NUMBER', 'message': clean_msg}}), 422
             elif 'rate limit' in error_msg_lower or 'too many requests' in error_msg_lower or '429' in error_msg_lower:
