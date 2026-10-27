@@ -28,12 +28,12 @@ export default function Shipments() {
 
   return (
     <>
-      <PageHeader title="Shipments" subtitle="Search, filter and open any shipment"
+      <PageHeader title="Shipments" 
         actions={<Link href="/shipments/new" className="btn-primary">Add shipment</Link>} />
       <div className="mb-4 flex flex-wrap gap-3">
         <div className="relative min-w-60 flex-1">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
-          <input aria-label="Search shipments" className="input pl-10" placeholder="Search tracking number or description" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input aria-label="Search shipments" className="input pl-10" placeholder="Search shipments" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <select aria-label="Filter by status" className="input w-auto" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All statuses</option>

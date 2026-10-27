@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
 
   return (
     <>
-      <PageHeader title="Analytics" subtitle="Delivery performance and distribution"
+      <PageHeader title="Analytics" subtitle="Delivery performance"
         actions={<button className="btn-ghost" onClick={() => exportCsv().catch((e) => alert(e.message))}><Download size={16} aria-hidden /> Export CSV</button>} />
       {o.total === 0 ? <Empty title="Nothing to analyse yet" body="Add a few shipments and come back." /> : (
         <>

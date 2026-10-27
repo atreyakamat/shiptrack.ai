@@ -72,7 +72,7 @@ export default function NewShipment() {
           onSolved={() => router.push(`/shipments/${pending.id}`)}
         />
       )}
-      <PageHeader title="Add shipment" subtitle="Paste an India Post tracking ID or scan a postal receipt" />
+      <PageHeader title="Add shipment" subtitle="Paste a tracking ID or scan a receipt" />
       <form onSubmit={submit} className="card space-y-4 p-6">
         <div>
           <label htmlFor="scan" className="label">Scan a receipt (PNG, JPG or PDF)</label>
@@ -88,7 +88,7 @@ export default function NewShipment() {
         <div>
           <label htmlFor="tn" className="label">Tracking number</label>
           <input id="tn" required className="input font-mono" placeholder="EM100000002IN" value={trackingNumber} onChange={(e) => setTrackingNumber(e.target.value)} />
-          <p className="mt-1.5 text-xs text-muted">{trackingNumber ? (carrier ? `Detected: ${carrier.label}` : "Not a recognised India Post ID yet") : "We detect the carrier from the ID. Currently India Post."}</p>
+          <p className="mt-1.5 text-xs text-muted">{trackingNumber ? (carrier ? `Detected: ${carrier.label}` : "Not a valid India Post ID") : "e.g. EM123456789IN"}</p>
         </div>
         {!ocr && (
           <div>
@@ -97,7 +97,6 @@ export default function NewShipment() {
           </div>
         )}
         {error && <ErrorBox message={error} />}
-        {busy && <p className="text-xs text-muted" role="status">Looking this up. If an India Post browser window opened, enter the CAPTCHA there and press TRACK (up to 90 seconds).</p>}
         <button className="btn-primary w-full" disabled={busy || !trackingNumber}>{busy ? "Working…" : "Add shipment"}</button>
       </form>
     </div>

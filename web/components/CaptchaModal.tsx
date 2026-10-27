@@ -89,9 +89,7 @@ export function CaptchaModal({
           <button onClick={onClose} aria-label="Close" className="text-muted hover:text-white"><X size={20} /></button>
         </div>
 
-        <p className="mb-3 text-sm text-muted">
-          India Post asks for a CAPTCHA on every lookup. Type what you see below.
-        </p>
+        <p className="mb-3 text-sm text-muted">Type the characters you see.</p>
 
         <div className="mb-3 grid min-h-[72px] place-items-center rounded-xl border border-line bg-white p-2">
           {phase === "loading" ? (

@@ -21,7 +21,7 @@ export default function InsightsPage() {
 
   return (
     <>
-      <PageHeader title="AI Insights" subtitle="What deserves your attention across all shipments"
+      <PageHeader title="AI Insights" subtitle="Across all shipments"
         actions={<button className="btn-primary" onClick={regenerate} disabled={busy}><Sparkles size={16} aria-hidden /> {busy ? "Generating…" : "Regenerate"}</button>} />
       <div className="card border-indigo/30 p-6"><p className="text-lg">{data.summary}</p></div>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

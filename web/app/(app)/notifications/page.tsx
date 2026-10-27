@@ -17,7 +17,7 @@ export default function NotificationsPage() {
 
   return (
     <>
-      <PageHeader title="Notifications" subtitle="Updates about your shipments"
+      <PageHeader title="Notifications" 
         actions={<button className="btn-ghost" onClick={markAll} disabled={busy || !data?.length}>Mark all read</button>} />
       {error && <ErrorBox message={error} />}
       {loading && !data && <Loading />}

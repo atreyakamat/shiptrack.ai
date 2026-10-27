@@ -87,7 +87,6 @@ export default function ShipmentDetail({ params }: { params: Promise<{ id: strin
           <button className="btn-ghost text-red-300" onClick={remove} disabled={!!busy}><Trash2 size={16} aria-hidden /> Delete</button>
         </div>
       </div>
-      {busy === "refresh" && <p className="mb-4 text-xs text-muted" role="status">Refreshing. If an India Post browser window opened, enter the CAPTCHA there and press TRACK.</p>}
       {actionError && <div className="mb-4"><ErrorBox message={actionError} /></div>}
       {s.last_error && <div className="mb-4"><ErrorBox message={`Last sync error: ${s.last_error}`} /></div>}
 
